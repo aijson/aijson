@@ -168,3 +168,17 @@ def check_config_consistency(
         pass_ = False
 
     return pass_
+
+
+def get_flow_variables(
+    config: ActionConfig,
+):
+    dependencies = _get_root_dependencies(config)
+
+    variables = set()
+    for dep in dependencies:
+        if dep in config.flow:
+            continue
+        variables.add(dep)
+
+    return variables
