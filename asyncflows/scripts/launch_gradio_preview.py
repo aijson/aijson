@@ -13,7 +13,7 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
-    with gr.Blocks() as preview:
+    with gr.Blocks(analytics_enabled=False) as preview:
         variable_textboxes = {
             variable_name: gr.Textbox(label=variable_name, interactive=True)
             for variable_name in variables
