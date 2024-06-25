@@ -8,9 +8,22 @@ from structlog_sentry import SentryProcessor
 _configured = False
 
 
-def configure_logging(pretty=True, additional_processors=None, level=logging.INFO):
+def configure_logging(pretty=True, additional_processors=None, level=None):
     if additional_processors is None:
         additional_processors = []
+
+    if level is None:
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "--log-level",
+            default="WARNING",
+            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        )
+        args, _ = parser.parse_known_args()
+        level = getattr(logging, args.log_level)
+
     logging.basicConfig(
         level=level,
     )
@@ -18,14 +31,16 @@ def configure_logging(pretty=True, additional_processors=None, level=logging.INF
         wrapper_class=structlog.make_filtering_bound_logger(level),
     )
 
+    library_log_level = max(level, logging.INFO)
+
     # silence the boto3 logs a bit
-    logging.getLogger("openai").setLevel(logging.INFO)
+    logging.getLogger("openai").setLevel(library_log_level)
     # logging.getLogger("httpx").setLevel(logging.INFO)
     # logging.getLogger("httpcore").setLevel(logging.INFO)
-    logging.getLogger("boto3").setLevel(logging.INFO)
-    logging.getLogger("aioboto3").setLevel(logging.INFO)
-    logging.getLogger("botocore").setLevel(logging.INFO)
-    logging.getLogger("aiobotocore").setLevel(logging.INFO)
+    logging.getLogger("boto3").setLevel(library_log_level)
+    logging.getLogger("aioboto3").setLevel(library_log_level)
+    logging.getLogger("botocore").setLevel(library_log_level)
+    logging.getLogger("aiobotocore").setLevel(library_log_level)
 
     processors = additional_processors + [
         structlog.stdlib.add_log_level,  # add log level
