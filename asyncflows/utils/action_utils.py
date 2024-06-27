@@ -255,7 +255,10 @@ def build_link_literal(
 
     # if there are any models, then each recursive subfield is a var, like jsonpath
     for action_id, action_invocation in action_invocations.items():
-        action_type = actions_dict[action_invocation.action]
+        try:
+            action_type = actions_dict[action_invocation.action]
+        except KeyError:
+            continue
         outputs_type = action_type._get_outputs_type(action_invocation)
         base_description = build_action_description(
             action_type,
