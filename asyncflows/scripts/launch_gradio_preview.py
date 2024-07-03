@@ -11,9 +11,13 @@ from asyncflows.utils.static_utils import get_flow_variables
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
+css = """
+footer {visibility: hidden}
+"""
+
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
-    with gr.Blocks(analytics_enabled=False) as preview:
+    with gr.Blocks(analytics_enabled=False, css=css) as preview:
         variable_textboxes = {
             variable_name: gr.Textbox(label=variable_name, interactive=True)
             for variable_name in variables
