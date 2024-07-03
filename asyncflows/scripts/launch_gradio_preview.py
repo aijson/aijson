@@ -66,7 +66,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     return preview
 
 
-def serve_flow_gradio_app(flow_path: str):
+def create_flow_gradio_app(flow_path: str):
     log = get_logger()
 
     flow = AsyncFlows.from_file(flow_path)
@@ -74,9 +74,7 @@ def serve_flow_gradio_app(flow_path: str):
     # TODO differentiate variables by type
     variables = get_flow_variables(flow.action_config)
 
-    preview = construct_gradio_app(log, variables, flow)
-
-    preview.launch()
+    return construct_gradio_app(log, variables, flow)
 
 
 if __name__ == "__main__":
@@ -90,4 +88,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     flow_path = args.flow
 
-    serve_flow_gradio_app(flow_path)
+    demo = create_flow_gradio_app(flow_path)
+    demo.launch()
