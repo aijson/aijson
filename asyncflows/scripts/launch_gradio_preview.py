@@ -20,7 +20,10 @@ footer {visibility: hidden}
 
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
+    actions_dict = get_actions_dict()
+
     with gr.Blocks(analytics_enabled=False, css=css) as preview:
+        # build variable inputs
         variable_textboxes = {
             variable_name: gr.Textbox(label=variable_name, interactive=True)
             for variable_name in variables
@@ -28,8 +31,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
 
         submit_button = gr.Button("Submit")
 
-        actions_dict = get_actions_dict()
-
+        # build action outputs
         action_output_components = {}
         for action_id, action_invocation in flow.action_config.flow.items():
             # TODO handle loop
