@@ -35,11 +35,13 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     with gr.Blocks(analytics_enabled=False, css=css) as preview:
         # build variable inputs
         variable_textboxes = {
-            variable_name: gr.Textbox(label=variable_name, interactive=True)
+            variable_name: gr.Textbox(
+                label=variable_name, interactive=True, key=variable_name
+            )
             for variable_name in variables
         }
 
-        submit_button = gr.Button("Submit")
+        submit_button = gr.Button("Submit", key="__submit_button")
 
         # build action outputs
         action_output_components = {}
@@ -57,7 +59,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                         full_output_name = f"{action_id}.{output_name}"
                         with gr.Tab(output_name):
                             action_output_components[full_output_name] = gr.Markdown(
-                                show_label=False,
+                                show_label=False, key=full_output_name
                             )
 
         async def handle_submit(*args):
