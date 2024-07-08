@@ -119,6 +119,9 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
     """
 
     # print the port the server is running on to pipe 3
+    # wait for port to be assigned
+    while not hasattr(flow_preview, "server_port"):
+        time.sleep(0.05)
     with os.fdopen(3, "w") as fd:
         fd.write(str(flow_preview.server_port))
 
