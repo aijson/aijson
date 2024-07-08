@@ -1,6 +1,5 @@
 import argparse
 import contextlib
-import importlib
 import os
 import time
 import traceback
@@ -73,12 +72,12 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             kwargs = {variable_name: arg for variable_name, arg in zip(variables, args)}
             ready_flow = flow.set_vars(**kwargs)
 
-            objects_and_coros = []
+            objects_and_agens = []
             for (
                 output_target,
                 action_output_textbox,
             ) in action_output_components.items():
-                objects_and_coros.append(
+                objects_and_agens.append(
                     (
                         action_output_textbox,
                         ready_flow.stream(output_target),
@@ -86,10 +85,12 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 )
 
             # Stream the variables
-            async for output_textbox, outputs in merge_iterators(
+            merge = merge_iterators(
                 log,
-                *zip(*objects_and_coros),
-            ):
+                *zip(*objects_and_agens),
+                raise_=True,
+            )
+            async for output_textbox, outputs in merge:
                 yield {output_textbox: outputs}
 
         submit_button.click(
@@ -152,7 +153,8 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
     last_mtime: float | None = None
     # Need to import the module in this thread so that the
     # module is available in the namespace of this thread
-    module = importlib.import_module(reloader.watch_module_name)
+    # (not actually cus it's the same module as this file – the exec and getattr are also commented out due to this)
+    # module = importlib.import_module(reloader.watch_module_name)
     while reloader.should_watch():
         changed = get_changes()
         if changed:
@@ -161,8 +163,11 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
                 changed_demo_file = _remove_no_reload_codeblocks(
                     str(reloader.demo_file)
                 )
-                exec(changed_demo_file, module.__dict__)
+
+                # exec(changed_demo_file, module.__dict__)
+                exec(changed_demo_file, globals())
             except Exception:
+                # TODO use error logger
                 print(
                     f"Reloading {reloader.watch_module_name} failed with the following exception: "
                 )
@@ -171,7 +176,8 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
                 reloader.alert_change("error")
                 reloader.app.reload_error_message = traceback.format_exc()
                 continue
-            demo = getattr(module, reloader.demo_name)
+            # demo = getattr(module, reloader.demo_name)
+            demo = globals()[reloader.demo_name]
             reloader.swap_blocks(demo)
             last_mtime = None
         time.sleep(0.05)

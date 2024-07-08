@@ -174,6 +174,11 @@ class ActionService:
             log.error("Action exception", traceback="".join(tb))
             sentry_sdk.capture_exception(e)
             yield None
+        except BaseException as e:
+            log.info(
+                "Action canceled",
+                exc_type=type(e).__name__,
+            )
         finally:
             log.info(
                 "Action finished",

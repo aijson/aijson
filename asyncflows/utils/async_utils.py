@@ -1,7 +1,7 @@
 import asyncio
 import time
-from asyncio import CancelledError
-from typing import TypeVar, AsyncIterator, Awaitable, Sequence
+from asyncio import CancelledError, Task
+from typing import TypeVar, AsyncIterator, Awaitable, Sequence, AsyncGenerator
 
 import sentry_sdk
 import structlog
@@ -51,6 +51,7 @@ async def merge_iterators(
     log: structlog.stdlib.BoundLogger,
     ids: Sequence[IdType],
     coros: list[AsyncIterator[OutputType]],
+    raise_: bool = False,
 ) -> AsyncIterator[tuple[IdType, OutputType | None]]:
     async def worker(
         aiter: AsyncIterator[OutputType], iterator_id: IdType, queue: asyncio.Queue
@@ -105,15 +106,30 @@ async def merge_iterators(
                         "Generator exited",
                         id=id_,
                     )
+                    # TODO maybe this should always raise?
+                    if raise_:
+                        raise
                 except CancelledError:
                     log.warning(
                         "Generator cancelled",
                         id=id_,
                     )
+                    if raise_:
+                        raise
     finally:
         for worker_task in workers:
             worker_task.cancel()
         await asyncio.gather(*workers, return_exceptions=True)
+
+
+async def cancel_generators(agenerators: list[AsyncGenerator]):
+    tasks = []
+    for coro in agenerators:
+        task = Task(coro.__anext__())
+        tasks.append(task)
+        task.cancel()
+
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def iterator_to_coro(async_iterator: AsyncIterator[T | None]) -> T | None:
