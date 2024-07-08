@@ -179,6 +179,7 @@ class ActionService:
                 "Action canceled",
                 exc_type=type(e).__name__,
             )
+            raise
         finally:
             log.info(
                 "Action finished",
