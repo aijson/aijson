@@ -9,8 +9,6 @@ from functools import partial
 from pathlib import Path
 from unittest import mock
 
-from gradio.utils import SourceFileReloader, _remove_no_reload_codeblocks
-
 from asyncflows import AsyncFlows
 from asyncflows.log_config import get_logger
 from asyncflows.models.config.flow import Loop
@@ -21,6 +19,7 @@ from asyncflows.utils.static_utils import get_flow_variables
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 
+from gradio.utils import SourceFileReloader, _remove_no_reload_codeblocks  # noqa: E402
 import gradio as gr  # noqa: E402
 
 
