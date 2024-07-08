@@ -218,7 +218,7 @@ parser.add_argument(
     required=True,
 )
 
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 flow_path = args.flow
 
 context = contextlib.nullcontext()
