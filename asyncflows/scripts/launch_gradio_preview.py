@@ -119,6 +119,10 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
     get_changes is adapted from uvicorn's default file watcher.
     """
 
+    # print the port the server is running on to pipe 3
+    with os.fdopen(3, "w") as fd:
+        fd.write(str(flow_preview.server_port))
+
     # The thread running watchfn will be the thread reloading
     # the app. So we need to modify this thread_data attr here
     # so that subsequent calls to reload don't launch the app
