@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import json
 import os
 import time
 import traceback
@@ -69,7 +70,13 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             }
 
             # Set the variables
-            kwargs = {variable_name: arg for variable_name, arg in zip(variables, args)}
+            kwargs = {}
+            for variable_name, arg in zip(variables, args):
+                try:
+                    val = json.loads(arg)
+                except json.JSONDecodeError:
+                    val = arg
+                kwargs[variable_name] = val
             ready_flow = flow.set_vars(**kwargs)
 
             objects_and_agens = []
