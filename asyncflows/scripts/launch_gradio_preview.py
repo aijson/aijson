@@ -14,6 +14,7 @@ from asyncflows.log_config import get_logger
 from asyncflows.models.config.flow import Loop
 from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
+from asyncflows.utils.format_utils import format_value
 from asyncflows.utils.static_utils import get_flow_variables
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
@@ -57,9 +58,12 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             continue
                         full_output_name = f"{action_id}.{output_name}"
                         with gr.Tab(output_name):
-                            action_output_components[full_output_name] = gr.Markdown(
-                                show_label=False, key=full_output_name
+                            component = gr.Markdown(
+                                show_label=False,
+                                key=full_output_name,
+                                line_breaks=True,
                             )
+                            action_output_components[full_output_name] = component
 
         async def handle_submit(*args):
             # TODO handle non-string inputs and outputs
@@ -98,7 +102,8 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 raise_=True,
             )
             async for output_textbox, outputs in merge:
-                yield {output_textbox: outputs}
+                formatted_value = format_value(outputs)
+                yield {output_textbox: formatted_value}
 
         submit_button.click(
             handle_submit,
