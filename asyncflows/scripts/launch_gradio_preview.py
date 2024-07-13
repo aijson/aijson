@@ -15,6 +15,7 @@ from asyncflows.models.config.flow import Loop
 from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
+from asyncflows.utils.singleton_utils import TempEnvContext
 from asyncflows.utils.static_utils import get_flow_variables
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
@@ -33,6 +34,33 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
 
     with gr.Blocks(analytics_enabled=False, css=css) as preview:
+        env_var_state = gr.State([])
+
+        def update_env_var_state(*args):
+            if len(args) // 2 != len(args) / 2:
+                raise RuntimeError("Number of env var state update should be even")
+
+            return [(k, v) for k, v in zip(args[::2], args[1::2])]
+
+        # build env var accordion
+        with gr.Accordion("Environment Variables", open=False):
+            add_button = gr.Button("+", render=False)
+
+            @gr.render(inputs=env_var_state, triggers=[add_button.click])
+            def render_env_vars(env_var_tuples):
+                env_var_tuples += [("", "")]
+
+                fields = []
+                for k, v in env_var_tuples:
+                    with gr.Row():
+                        key_field = gr.Textbox(k, label="Key")
+                        value_field = gr.Textbox(v, label="Value")
+                        fields.extend((key_field, value_field))
+                for field in fields:
+                    field.change(update_env_var_state, fields, env_var_state)
+
+            add_button.render()
+
         # build variable inputs
         variable_textboxes = {
             variable_name: gr.Textbox(
@@ -65,7 +93,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             )
                             action_output_components[full_output_name] = component
 
-        async def handle_submit(*args):
+        async def handle_submit(env_var_tuples, *args):
             # TODO handle non-string inputs and outputs
             # Clear the output fields
             yield {
@@ -95,19 +123,24 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     )
                 )
 
+            # Prepare the environment variables
+            env_var_dict = {k: v for k, v in env_var_tuples if k and v}
+            context = TempEnvContext(env_var_dict)
+
             # Stream the variables
             merge = merge_iterators(
                 log,
                 *zip(*objects_and_agens),
                 raise_=True,
             )
-            async for output_textbox, outputs in merge:
-                formatted_value = format_value(outputs)
-                yield {output_textbox: formatted_value}
+            with context:
+                async for output_textbox, outputs in merge:
+                    formatted_value = format_value(outputs)
+                    yield {output_textbox: formatted_value}
 
         submit_button.click(
             handle_submit,
-            inputs=list(variable_textboxes.values()),
+            inputs=[env_var_state] + list(variable_textboxes.values()),
             outputs=list(action_output_components.values()),
         )
 
