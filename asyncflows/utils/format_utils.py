@@ -23,5 +23,5 @@ def format_value(value: Any) -> str:
                 indent=2,
             )
         )
-    except json.JSONDecodeError:
+    except TypeError:
         return str(value)
