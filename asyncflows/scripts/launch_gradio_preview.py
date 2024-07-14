@@ -30,11 +30,18 @@ footer {visibility: hidden}
 """
 
 
+default_env_vars = [
+    ("OPENAI_API_KEY", ""),
+    ("ANTHROPIC_API_KEY", ""),
+]
+
+
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
 
     with gr.Blocks(analytics_enabled=False, css=css) as preview:
-        env_var_state = gr.State([])
+        env_var_state = gr.State(default_env_vars)
+        reload_state = gr.State(0)
 
         def update_env_var_state(*args):
             if len(args) // 2 != len(args) / 2:
@@ -44,22 +51,43 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
 
         # build env var accordion
         with gr.Accordion("Environment Variables", open=False):
-            add_button = gr.Button("+", render=False)
 
-            @gr.render(inputs=env_var_state, triggers=[add_button.click])
+            @gr.render(
+                inputs=env_var_state, triggers=[reload_state.change, preview.load]
+            )
             def render_env_vars(env_var_tuples):
-                env_var_tuples += [("", "")]
-
                 fields = []
-                for k, v in env_var_tuples:
+                delete_buttons = []
+                for i, (k, v) in enumerate(env_var_tuples):
                     with gr.Row():
-                        key_field = gr.Textbox(k, label="Key")
-                        value_field = gr.Textbox(v, label="Value")
+                        key_field = gr.Textbox(
+                            k,
+                            # label="Key",
+                            show_label=False,
+                        )
+                        value_field = gr.Textbox(
+                            v,
+                            # label="Value",
+                            show_label=False,
+                        )
                         fields.extend((key_field, value_field))
+                        delete_button = gr.Button("-")
+                        delete_buttons.append(delete_button)
                 for field in fields:
                     field.change(update_env_var_state, fields, env_var_state)
+                for i, button in enumerate(delete_buttons):
+                    remaining_fields = (
+                        fields[0 : i * 2] + fields[i * 2 + 2 : len(fields)]
+                    )
+                    button.click(
+                        update_env_var_state, remaining_fields, env_var_state
+                    ).then(lambda i: i + 1, reload_state, reload_state)
 
-            add_button.render()
+            with gr.Row():
+                add_button = gr.Button("+")
+                add_button.click(
+                    lambda ts: ts + [("", "")], env_var_state, env_var_state
+                ).then(lambda i: i + 1, reload_state, reload_state)
 
         # build variable inputs
         variable_textboxes = {
