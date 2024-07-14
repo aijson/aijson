@@ -170,15 +170,35 @@ def check_config_consistency(
     return pass_
 
 
-def get_flow_variables(
+def get_invocation_dependencies(
+    invocation: Executable,
+) -> set[str]:
+    if isinstance(invocation, Loop):
+        return set(_get_root_dependencies(invocation.in_)) | {
+            dep
+            for dep in get_flow_dependencies(invocation.flow)
+            if dep != invocation.for_
+        }
+    elif isinstance(invocation, ActionInvocation):
+        return set(_get_root_dependencies(invocation))
+    else:
+        assert_never(invocation)
+
+
+def get_flow_dependencies(
+    flow: FlowConfig,
+) -> set[str]:
+    vars_ = set()
+    for invocation in flow.values():
+        vars_ |= {
+            dep for dep in get_invocation_dependencies(invocation) if dep not in flow
+        }
+    return vars_
+
+
+def get_config_variables(
     config: ActionConfig,
-):
-    dependencies = _get_root_dependencies(config)
-
-    variables = set()
-    for dep in dependencies:
-        if dep in config.flow:
-            continue
-        variables.add(dep)
-
-    return variables
+) -> set[str]:
+    return set(_get_root_dependencies(config.default_model)) | get_flow_dependencies(
+        config.flow
+    )

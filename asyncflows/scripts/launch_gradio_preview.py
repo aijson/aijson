@@ -16,7 +16,7 @@ from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
 from asyncflows.utils.singleton_utils import TempEnvContext
-from asyncflows.utils.static_utils import get_flow_variables
+from asyncflows.utils.static_utils import get_config_variables
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -181,7 +181,7 @@ def create_flow_gradio_app(flow_path: str):
     flow = AsyncFlows.from_file(flow_path)
 
     # TODO differentiate variables by type
-    variables = get_flow_variables(flow.action_config)
+    variables = get_config_variables(flow.action_config)
 
     return construct_gradio_app(log, variables, flow)
 
