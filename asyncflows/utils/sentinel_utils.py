@@ -1,5 +1,6 @@
-import inspect
 from typing import Any, TypeGuard
+
+from asyncflows.utils.subtype_utils import is_subtype
 
 
 class Sentinel:
@@ -7,7 +8,7 @@ class Sentinel:
 
 
 def is_sentinel(value: Any) -> TypeGuard[type[Sentinel]]:
-    return inspect.isclass(value) and issubclass(value, Sentinel)
+    return is_subtype(value, Sentinel)
 
 
 def is_set_of_tuples(value: Any) -> TypeGuard[set[tuple]]:

@@ -19,6 +19,7 @@ from asyncflows.models.config.value_declarations import (
 )
 from asyncflows.models.io import Inputs, Outputs, DefaultOutputOutputs
 from asyncflows.models.primitives import HintLiteral, ExecutableId, ExecutableName
+from asyncflows.utils.pydantic_utils import is_basemodel_subtype
 from asyncflows.utils.type_utils import build_field_description, templatify_fields
 
 
@@ -104,7 +105,7 @@ def _get_recursive_subfields(
     #     for name, field in obj.items():
     #         # out.append(name)
     #         out.extend(_get_recursive_subfields(field, base_description, base_markdown_description, f"{name}."))
-    if inspect.isclass(obj) and issubclass(obj, pydantic.BaseModel):
+    if is_basemodel_subtype(obj):
         for name, field in obj.model_fields.items():
             annotated_field = _build_annotated_field(
                 base_description=base_description,

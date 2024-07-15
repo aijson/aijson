@@ -15,6 +15,8 @@ from typing import Annotated
 import pydantic
 
 from asyncflows.models.primitives import HintLiteral
+from asyncflows.utils.pydantic_utils import is_basemodel_subtype
+from asyncflows.utils.subtype_utils import is_subtype
 
 # forgive me father for I have sinned
 # "I have used a global variable", says copilot
@@ -111,7 +113,7 @@ def transform_and_templatify_type(
         and not hasattr(type_, "__origin__")
         and type_.__module__ != "builtins"
     ):
-        if inspect.isclass(type_) and issubclass(type_, BaseModel):
+        if is_basemodel_subtype(type_):
             name = f"{type_.__name__}_{var_string}"
             module = __name__
         else:
@@ -149,7 +151,7 @@ def transform_and_templatify_type(
         )
         type_ = origin[args]  # type: ignore
     # special case pydantic models
-    elif inspect.isclass(type_) and issubclass(type_, BaseModel):
+    elif is_basemodel_subtype(type_):
         fields = templatify_model(
             type_,
             vars_=vars_,
@@ -168,7 +170,7 @@ def transform_and_templatify_type(
         type_.model_rebuild()
 
     # resolve TransformsFrom
-    if inspect.isclass(type_) and issubclass(type_, TransformsFrom):
+    if is_subtype(type_, TransformsFrom):
         type_ = type_._get_config_type(
             vars_=vars_,
             links=links,
@@ -217,7 +219,7 @@ def build_type_qualified_name(
         return f"{origin_qual_name}[{args_qual_names}]"
 
     # handle TransformsFrom
-    if inspect.isclass(type_) and issubclass(type_, TransformsFrom):
+    if is_subtype(type_, TransformsFrom):
         return build_type_qualified_name(
             type_._get_config_type(None, None),
             markdown=markdown,
@@ -225,7 +227,7 @@ def build_type_qualified_name(
         )
 
     # convert string enums to a string
-    if inspect.isclass(type_) and issubclass(type_, Enum):
+    if is_subtype(type_, Enum):
         return " | ".join(repr(member.value) for member in type_)
 
     # if hasattr(type_, "title") and isinstance(type_.title, str):
