@@ -3,8 +3,6 @@ import contextlib
 from collections import defaultdict
 from typing import AsyncIterator, Any, Literal, TYPE_CHECKING
 
-import numpy as np
-
 if TYPE_CHECKING:
     from infinity_emb import AsyncEmbeddingEngine
 else:
@@ -76,6 +74,8 @@ async def retrieve_indices(
     k: int,
     keep_engine_alive_delay: float = DEFAULT_KEEP_ENGINE_ALIVE_DELAY,
 ) -> list[int]:
+    import numpy as np
+
     # embed query and documents
     documents.append(query)
     async with get_engine(log, model, device, keep_engine_alive_delay) as engine:
