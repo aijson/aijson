@@ -8,21 +8,60 @@ from structlog_sentry import SentryProcessor
 _configured = False
 
 
+_default_log_level = logging.WARNING
+
+
+def _find_log_level_env_var():
+    if "LOG_LEVEL" not in os.environ:
+        return None
+
+    level_str = os.environ["LOG_LEVEL"]
+
+    if level_str in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        return getattr(logging, level_str)
+
+    try:
+        level_int = int(level_str)
+    except TypeError:
+        return None
+
+    if level_int in [
+        logging.DEBUG,
+        logging.INFO,
+        logging.WARNING,
+        logging.ERROR,
+        logging.CRITICAL,
+    ]:
+        return level_int
+
+    return None
+
+
+def _find_log_level_arg():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--log-level",
+        required=False,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+    )
+    args, _ = parser.parse_known_args()
+    if args.log_level is None:
+        return None
+    return getattr(logging, args.log_level)
+
+
 def configure_logging(pretty=True, additional_processors=None, level=None):
     if additional_processors is None:
         additional_processors = []
 
     if level is None:
-        import argparse
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--log-level",
-            default="WARNING",
-            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        )
-        args, _ = parser.parse_known_args()
-        level = getattr(logging, args.log_level)
+        level = _find_log_level_env_var()
+    if level is None:
+        level = _find_log_level_arg()
+    if level is None:
+        level = _default_log_level
 
     logging.basicConfig(
         level=level,
