@@ -42,6 +42,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     with gr.Blocks(analytics_enabled=False, css=css) as preview:
         env_var_state = gr.State(default_env_vars)
         reload_state = gr.State(0)
+        preview.load(lambda i: i + 1, reload_state, reload_state)
 
         def update_env_var_state(*args):
             if len(args) // 2 != len(args) / 2:
@@ -52,9 +53,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         # build env var accordion
         with gr.Accordion("Environment Variables", open=False):
 
-            @gr.render(
-                inputs=env_var_state, triggers=[reload_state.change, preview.load]
-            )
+            @gr.render(inputs=env_var_state, triggers=[reload_state.change])
             def render_env_vars(env_var_tuples):
                 fields = []
                 delete_buttons = []
