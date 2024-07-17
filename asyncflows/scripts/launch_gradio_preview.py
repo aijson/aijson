@@ -46,6 +46,33 @@ footer {visibility: hidden}
 }
 """
 
+js = """
+function main() {
+    const onInputKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.code === "KeyC") {
+        console.log('copy')
+        document.execCommand("copy");
+      } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyX") {
+        console.log('cut')
+        document.execCommand("cut");
+      } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyV") {
+        console.log('paste')
+        document.execCommand("paste");
+      } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyA") {
+        console.log('selectAll')
+        document.execCommand("selectAll");
+      }
+    }
+      window.addEventListener('click', (e) => {
+        console.log(e)
+      })
+      window.addEventListener('keydown', (e) => {
+        onInputKeyDown(e);
+      })
+
+    return "";
+}
+"""
 
 default_env_vars = [
     ("OPENAI_API_KEY", ""),
@@ -56,7 +83,7 @@ default_env_vars = [
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
 
-    with gr.Blocks(analytics_enabled=False, css=css) as preview:
+    with gr.Blocks(analytics_enabled=False, css=css, js=js) as preview:
         env_var_state = gr.State(default_env_vars)
         reload_state = gr.State(0)
         preview.load(lambda i: i + 1, reload_state, reload_state)
