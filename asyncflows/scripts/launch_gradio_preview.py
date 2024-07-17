@@ -27,6 +27,23 @@ import gradio as gr  # noqa: E402
 
 css = """
 footer {visibility: hidden}
+
+.my-center-flex {
+  gap: 0px;
+  justify-content: center;
+}
+
+.my-square-button {
+  height: 100%;
+}
+
+.my-centered-container {
+  align-items: center;
+}
+
+.my-centered-text {
+  text-align: center;
+}
 """
 
 
@@ -58,19 +75,48 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 fields = []
                 delete_buttons = []
                 for i, (k, v) in enumerate(env_var_tuples):
-                    with gr.Row():
+                    with gr.Row(elem_classes=["my-centered-container"]):
                         key_field = gr.Textbox(
                             k,
                             # label="Key",
                             show_label=False,
+                            scale=1,
+                            min_width=200,
                         )
                         value_field = gr.Textbox(
                             v,
                             # label="Value",
+                            type="password",
                             show_label=False,
+                            scale=3,
                         )
                         fields.extend((key_field, value_field))
-                        delete_button = gr.Button("-")
+                        with gr.Column(
+                            scale=0, min_width=16, elem_classes=["my-center-flex"]
+                        ):
+                            gr.Markdown(
+                                "👁️",
+                                elem_classes=["my-centered-text"],
+                            )
+                            cb = gr.Checkbox(
+                                False,
+                                show_label=False,
+                                container=False,
+                                label="",
+                                scale=0,
+                                min_width=1,
+                            )
+                            cb.change(
+                                lambda t: gr.Textbox(type="text" if t else "password"),
+                                cb,
+                                value_field,
+                            )
+                        delete_button = gr.Button(
+                            "-",
+                            scale=0,
+                            min_width=20,
+                            elem_classes=["my-square-button"],
+                        )
                         delete_buttons.append(delete_button)
                 for field in fields:
                     field.change(update_env_var_state, fields, env_var_state)
