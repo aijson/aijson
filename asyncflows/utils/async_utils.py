@@ -6,6 +6,8 @@ from typing import TypeVar, AsyncIterator, Awaitable, Sequence, AsyncGenerator
 import sentry_sdk
 import structlog
 
+from asyncflows.utils.sentinel_utils import Sentinel
+
 T = TypeVar("T")
 IdType = TypeVar("IdType")
 OutputType = TypeVar("OutputType")
@@ -52,7 +54,8 @@ async def merge_iterators(
     ids: Sequence[IdType],
     coros: list[AsyncIterator[OutputType]],
     raise_: bool = False,
-) -> AsyncIterator[tuple[IdType, OutputType | None]]:
+    report_finished: bool = False,
+) -> AsyncIterator[tuple[IdType, OutputType | type[Sentinel] | Exception | None]]:
     async def worker(
         aiter: AsyncIterator[OutputType], iterator_id: IdType, queue: asyncio.Queue
     ):
@@ -64,7 +67,7 @@ async def merge_iterators(
             await queue.put((True, (iterator_id, exc)))
         finally:
             # Notify the main loop that this coroutine is done
-            await queue.put(None)
+            await queue.put((None, iterator_id))
 
     queue = asyncio.Queue()
     workers = []  # List to keep track of worker tasks.
@@ -77,9 +80,13 @@ async def merge_iterators(
         remaining_workers = len(workers)
         while remaining_workers > 0:
             result = await queue.get()
-            if result is None:
+            execution_status, args = result
+            if execution_status is None:
+                id_ = args
                 # One coroutine has finished.
                 remaining_workers -= 1
+                if report_finished:
+                    yield id_, Sentinel
                 continue
 
             # A result or an exception was received.

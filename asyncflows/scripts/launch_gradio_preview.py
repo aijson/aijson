@@ -7,6 +7,7 @@ import time
 import traceback
 import uuid
 from contextlib import contextmanager
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,6 +25,7 @@ from asyncflows.utils.format_utils import format_value
 from asyncflows.utils.gradio_utils import single_shot
 from asyncflows.utils.pydantic_utils import is_basemodel_subtype
 from asyncflows.utils.rendering_utils import extract_root_var
+from asyncflows.utils.sentinel_utils import is_sentinel
 from asyncflows.utils.singleton_utils import TempEnvContext
 from asyncflows.utils.static_utils import (
     get_config_variables,
@@ -65,6 +67,22 @@ footer {visibility: hidden}
 .my-centered-text {
   text-align: center;
 }
+
+.my-pending-action {
+  background-color: purple;
+}
+
+.my-running-action {
+  background-color: orange;
+}
+
+.my-succeeded-action {
+  background-color: green;
+}
+
+.my-failed-action {
+  background-color: red;
+}
 """
 
 js = """
@@ -92,6 +110,13 @@ default_env_vars = [
     ("OPENAI_API_KEY", ""),
     ("ANTHROPIC_API_KEY", ""),
 ]
+
+
+class ActionStatus(str, Enum):
+    PENDING = "my-pending-action"
+    RUNNING = "my-running-action"
+    SUCCEEDED = "my-succeeded-action"
+    FAILED = "my-failed-action"
 
 
 def _restore_value(name: str):
@@ -357,13 +382,15 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         # build action outputs
         action_output_components = {}
         run_buttons = {}
+        action_accordions = {}
+
         for action_id, action_invocation in flow.action_config.flow.items():
             # TODO handle loop
             if isinstance(action_invocation, Loop):
                 continue
             action = actions_dict[action_invocation.action]
             outputs_type = action._get_outputs_type(action_invocation)
-            with gr.Accordion(action_id):
+            with gr.Accordion(action_id) as action_accordion:
                 with gr.Tabs():
                     for output_name, output_field in outputs_type.model_fields.items():
                         if output_field.deprecated:
@@ -393,6 +420,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                                     #     "⬆️",
                                     #     # elem_classes=["my-square-column-button"],
                                     # )
+            action_accordions[action_id] = action_accordion
 
         def create_run_func(queued_action_ids: Collection[str]):
             async def _(env_var_tuples, *args):
@@ -417,17 +445,29 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     kwargs[variable_name] = val
                 ready_flow = flow.set_vars(**kwargs)
 
+                # set all objects as queued
+                # build objects and async generators
+                action_statuses = {}
                 target_outputs_and_agens = []
                 for output_target in action_output_components:
                     root_dependency = extract_root_var(output_target)
                     if root_dependency not in queued_action_ids:
                         continue
+                    action_statuses[root_dependency] = ActionStatus.PENDING
                     target_outputs_and_agens.append(
                         (
                             output_target,
                             ready_flow.stream(output_target),
                         )
                     )
+
+                # set action statuses (queued)
+                yield {
+                    action_accordions[action_id]: gr.Accordion(
+                        elem_classes=[action_status.value],
+                    )
+                    for action_id, action_status in action_statuses.items()
+                }
 
                 # Prepare the environment variables
                 env_var_dict = {k: v for k, v in env_var_tuples if k and v}
@@ -441,6 +481,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     log,
                     *zip(*target_outputs_and_agens),
                     raise_=True,
+                    report_finished=True,
                 )
                 with context:
                     async for target_output, outputs in merge:
@@ -448,6 +489,27 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             del _task_cancelled[task_id]
                             return
 
+                        action_id = extract_root_var(target_output)
+
+                        # update action status
+                        old_status = new_status = action_statuses[action_id]
+                        if is_sentinel(outputs) and old_status != ActionStatus.FAILED:
+                            if old_status == ActionStatus.PENDING:
+                                new_status = ActionStatus.FAILED
+                            else:
+                                new_status = ActionStatus.SUCCEEDED
+                        elif old_status == ActionStatus.PENDING:
+                            new_status = ActionStatus.RUNNING
+                        if old_status != new_status:
+                            action_statuses[action_id] = new_status
+                            yield {
+                                action_accordions[action_id]: gr.Accordion(
+                                    elem_classes=[action_statuses[action_id].value]
+                                )
+                            }
+
+                        if is_sentinel(outputs):
+                            continue
                         output_component = action_output_components[target_output]
                         if not outputs and isinstance(output_component, gr.JSON):
                             formatted_value = "{}"
@@ -460,7 +522,8 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         submit_button.click(
             create_run_func(flow.action_config.flow),
             inputs=[env_var_state] + list(variable_textboxes.values()),
-            outputs=list(action_output_components.values()),
+            outputs=list(action_output_components.values())
+            + list(action_accordions.values()),
         )
         for run_button_output, run_button in run_buttons.items():
             action_id = extract_root_var(run_button_output)
