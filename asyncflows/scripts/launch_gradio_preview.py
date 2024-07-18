@@ -50,22 +50,15 @@ js = """
 function main() {
     const onInputKeyDown = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.code === "KeyC") {
-        console.log('copy')
         document.execCommand("copy");
       } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyX") {
-        console.log('cut')
         document.execCommand("cut");
       } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyV") {
-        console.log('paste')
         document.execCommand("paste");
       } else if ((event.ctrlKey || event.metaKey) && event.code === "KeyA") {
-        console.log('selectAll')
         document.execCommand("selectAll");
       }
     }
-      window.addEventListener('click', (e) => {
-        console.log(e)
-      })
       window.addEventListener('keydown', (e) => {
         onInputKeyDown(e);
       })
