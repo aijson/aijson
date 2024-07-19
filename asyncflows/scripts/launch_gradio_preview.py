@@ -380,15 +380,15 @@ def patch_gradio(watch_filepath: str):
     for env_var, val in env_overrides.items():
         env_baks[env_var] = os.environ.get(env_var)
         os.environ[env_var] = val
-
-    with mock.patch("gradio.utils.watchfn", partial(watchfn, watch_filepath)):
-        yield
-
-    for env_var, val in env_baks.items():
-        if val is None:
-            del os.environ[env_var]
-        else:
-            os.environ["env_var"] = val
+    try:
+        with mock.patch("gradio.utils.watchfn", partial(watchfn, watch_filepath)):
+            yield
+    finally:
+        for env_var, val in env_baks.items():
+            if val is None:
+                del os.environ[env_var]
+            else:
+                os.environ["env_var"] = val
 
 
 parser = argparse.ArgumentParser()
