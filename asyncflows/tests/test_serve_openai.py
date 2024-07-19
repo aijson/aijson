@@ -44,12 +44,13 @@ async def test_run(serve, open_port):
                 "logprobs": None,
                 "message": {
                     "role": "assistant",
-                    "content": "```json\n3\n```",
+                    "content": "3",
                     "tool_calls": None,
                     "function_call": None,
                 },
             },
         ],
+        "service_tier": None,
         "system_fingerprint": None,
         "usage": None,
     }
@@ -77,7 +78,7 @@ async def test_stream(serve, open_port):
                 {
                     "delta": {
                         "role": "assistant",
-                        "content": "```json\n3\n```",
+                        "content": "3",
                         "tool_calls": None,
                         "function_call": None,
                     },
@@ -86,6 +87,7 @@ async def test_stream(serve, open_port):
                     "logprobs": None,
                 },
             ],
+            "service_tier": None,
             "system_fingerprint": None,
             "usage": None,
         }

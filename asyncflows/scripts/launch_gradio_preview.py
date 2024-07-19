@@ -16,6 +16,7 @@ from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
 from asyncflows.utils.gradio_utils import single_shot
+from asyncflows.utils.pydantic_utils import is_basemodel_subtype
 from asyncflows.utils.singleton_utils import TempEnvContext
 from asyncflows.utils.static_utils import get_config_variables
 
@@ -196,19 +197,25 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             continue
                         full_output_name = f"{action_id}.{output_name}"
                         with gr.Tab(output_name):
-                            component = gr.Markdown(
-                                show_label=False,
-                                key=full_output_name,
-                                line_breaks=True,
-                            )
+                            if is_basemodel_subtype(output_field.annotation):
+                                component = gr.JSON(
+                                    show_label=False,
+                                    key=full_output_name,
+                                )
+                            else:
+                                component = gr.Markdown(
+                                    show_label=False,
+                                    key=full_output_name,
+                                    line_breaks=True,
+                                )
                             action_output_components[full_output_name] = component
 
         async def handle_submit(env_var_tuples, *args):
             # TODO handle non-string inputs and outputs
             # Clear the output fields
             yield {
-                action_output_textbox: ""
-                for action_output_textbox in action_output_components.values()
+                output_component: "{}" if isinstance(output_component, gr.JSON) else ""
+                for output_component in action_output_components.values()
             }
 
             # Set the variables
@@ -221,14 +228,11 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 kwargs[variable_name] = val
             ready_flow = flow.set_vars(**kwargs)
 
-            objects_and_agens = []
-            for (
-                output_target,
-                action_output_textbox,
-            ) in action_output_components.items():
-                objects_and_agens.append(
+            target_outputs_and_agens = []
+            for output_target in action_output_components:
+                target_outputs_and_agens.append(
                     (
-                        action_output_textbox,
+                        output_target,
                         ready_flow.stream(output_target),
                     )
                 )
@@ -240,13 +244,17 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             # Stream the variables
             merge = merge_iterators(
                 log,
-                *zip(*objects_and_agens),
+                *zip(*target_outputs_and_agens),
                 raise_=True,
             )
             with context:
-                async for output_textbox, outputs in merge:
-                    formatted_value = format_value(outputs)
-                    yield {output_textbox: formatted_value}
+                async for target_output, outputs in merge:
+                    output_component = action_output_components[target_output]
+                    if not outputs and isinstance(output_component, gr.JSON):
+                        formatted_value = "{}"
+                    else:
+                        formatted_value = format_value(outputs)
+                    yield {output_component: formatted_value}
 
         submit_button.click(
             handle_submit,
