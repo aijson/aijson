@@ -89,7 +89,8 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
 
     with gr.Blocks(analytics_enabled=False, css=css, js=js) as preview:
         dotenv_path, env_vars = get_default_env_vars()
-        # TODO the env_var_state does not persist gradio reloads. hopefully this will be fixed upstream
+        # TODO the env_var_state does not persist gradio reloads
+        #  see https://github.com/gradio-app/gradio/issues/8855
         env_var_state = gr.State(env_vars)
         reload_state = gr.State(0)
         single_shot(lambda i: i + 1, reload_state, reload_state)
