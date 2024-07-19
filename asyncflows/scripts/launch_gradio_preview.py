@@ -7,11 +7,13 @@ import traceback
 from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import mock
 
-from asyncflows import AsyncFlows
+from asyncflows import AsyncFlows, ShelveCacheRepo
 from asyncflows.log_config import get_logger
 from asyncflows.models.config.flow import Loop
+from asyncflows.repos.cache_repo import CacheRepo
 from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
@@ -73,6 +75,12 @@ default_env_vars = [
     ("OPENAI_API_KEY", ""),
     ("ANTHROPIC_API_KEY", ""),
 ]
+
+if "_cache_repo" in globals():
+    # to persist reloads
+    _cache_repo = globals()["_cache_repo"]
+else:
+    _cache_repo = ShelveCacheRepo(temp_dir=TemporaryDirectory().name)
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -265,10 +273,15 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     return preview
 
 
-def create_flow_gradio_app(flow_path: str):
+def create_flow_gradio_app(
+    flow_path: str, cache_repo: CacheRepo | type[CacheRepo] = ShelveCacheRepo
+):
     log = get_logger()
 
-    flow = AsyncFlows.from_file(flow_path)
+    flow = AsyncFlows.from_file(
+        flow_path,
+        cache_repo=cache_repo,
+    )
 
     # TODO differentiate variables by type
     variables = get_config_variables(flow.action_config)
@@ -389,5 +402,5 @@ if gr.NO_RELOAD:
     context = patch_gradio(flow_path)
 
 with context:
-    flow_preview = create_flow_gradio_app(flow_path)
+    flow_preview = create_flow_gradio_app(flow_path, cache_repo=_cache_repo)
     flow_preview.launch()
