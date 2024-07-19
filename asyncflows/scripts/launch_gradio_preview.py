@@ -73,13 +73,52 @@ default_env_vars = [
 ]
 
 
+def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
+    # load dotenv
+    from dotenv import dotenv_values, find_dotenv
+
+    dotenv_path = find_dotenv()
+    if not dotenv_path:
+        return None, default_env_vars
+    return dotenv_path, [(name, val or "") for name, val in dotenv_values().items()]
+
+
+def single_shot(fn, inputs, outputs):
+    # lower values make the event trigger more times
+    # while lagging even with 0.1 it might trigger multiple times
+    timer = gr.Timer(0.1)
+
+    def _(*args, **kwargs):
+        res = fn(*args, **kwargs)
+        timer_update = gr.Timer(active=False)
+        if isinstance(res, list):
+            res += [timer_update]
+        elif isinstance(res, dict):
+            res[timer] = timer_update
+        else:
+            res = [res, timer_update]
+        return res
+
+    if isinstance(outputs, list):
+        outputs += [timer]
+    elif isinstance(outputs, set):
+        outputs.add(timer)
+    else:
+        outputs = [outputs, timer]
+    timer.tick(_, inputs, outputs)
+
+    return timer
+
+
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
 
     with gr.Blocks(analytics_enabled=False, css=css, js=js) as preview:
-        env_var_state = gr.State(default_env_vars)
+        dotenv_path, env_vars = get_default_env_vars()
+        # TODO the env_var_state does not persist gradio reloads. hopefully this will be fixed upstream
+        env_var_state = gr.State(env_vars)
         reload_state = gr.State(0)
-        preview.load(lambda i: i + 1, reload_state, reload_state)
+        single_shot(lambda i: i + 1, reload_state, reload_state)
 
         def update_env_var_state(*args):
             if len(args) // 2 != len(args) / 2:
@@ -88,7 +127,10 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             return [(k, v) for k, v in zip(args[::2], args[1::2])]
 
         # build env var accordion
-        with gr.Accordion("Environment Variables", open=False):
+        env_var_label = "Environment Variables"
+        if dotenv_path is not None:
+            env_var_label += f" (loaded from `{dotenv_path}`)"
+        with gr.Accordion(env_var_label, open=False):
 
             @gr.render(inputs=env_var_state, triggers=[reload_state.change])
             def render_env_vars(env_var_tuples):
