@@ -3,6 +3,7 @@ import traceback
 from collections import defaultdict
 from typing import Any, AsyncIterator, Iterable
 
+from pydantic_core import PydanticSerializationError
 from typing_extensions import assert_never
 
 import sentry_sdk
@@ -616,6 +617,39 @@ class ActionService:
         log.debug("Resolved cache key", cache_key=cache_key)
         return cache_key
 
+    async def _cache_outputs(
+        self,
+        log: structlog.stdlib.BoundLogger,
+        outputs: Outputs,
+        cache_key: str | None,
+        action_name: str,
+        action_type: type[ActionSubclass],
+    ):
+        try:
+            outputs_json = outputs.model_dump_json()
+        except PydanticSerializationError:
+            log.warning(
+                "Outputs contain unserializable data; not caching. Set `cache = False` to disable this warning"
+            )
+            return
+
+        log.debug("Caching result")
+        try:
+            await self.cache_repo.store(
+                log,
+                cache_key,
+                outputs_json,
+                version=action_type.version,
+                namespace=action_name,
+                # TODO add expire
+                # expire=self.config.action_cache_expire,
+            )
+        except Exception as e:
+            log.warning(
+                "Cache store error",
+                exc_info=e,
+            )
+
     async def _run_and_broadcast_action(
         self,
         log: structlog.stdlib.BoundLogger,
@@ -677,8 +711,16 @@ class ActionService:
             # Check cache
             if hardcoded_cache_key is not None:
                 cache_key = hardcoded_cache_key
+            elif inputs is not None:
+                try:
+                    cache_key = inputs.model_dump_json()
+                except PydanticSerializationError:
+                    log.debug(
+                        "Could not construct cache key because inputs are unserializable"
+                    )
+                    cache_key = None
             else:
-                cache_key = inputs.model_dump_json() if inputs is not None else None
+                cache_key = None
             outputs = await self._check_cache(log, action_id, cache_key, flow=flow)
             if outputs is not None:
                 cache_hit = True
@@ -727,23 +769,13 @@ class ActionService:
             and action_type.cache
             and (not isinstance(outputs, CacheControlOutputs) or outputs._cache)
         ):
-            outputs_json = outputs.model_dump_json()
-            log.debug("Caching result")
-            try:
-                await self.cache_repo.store(
-                    log,
-                    cache_key,
-                    outputs_json,
-                    version=action_type.version,
-                    namespace=action_name,
-                    # TODO add expire
-                    # expire=self.config.action_cache_expire,
-                )
-            except Exception as e:
-                log.warning(
-                    "Cache store error",
-                    exc_info=e,
-                )
+            await self._cache_outputs(
+                log,
+                outputs=outputs,
+                cache_key=cache_key,
+                action_name=action_name,
+                action_type=action_type,
+            )
 
         if queues := self.new_listeners[task_id]:
             log.debug("Final output broadcast for new listeners")

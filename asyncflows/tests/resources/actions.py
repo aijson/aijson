@@ -253,3 +253,26 @@ class FinishAction(Action[FinishInputs, FinishOutputs]):
     async def run(self, inputs: FinishInputs) -> FinishOutputs:
         self.history.append(inputs._finished)
         return FinishOutputs(finish_history=self.history[:])
+
+
+class Dummy:
+    def __init__(self, a):
+        self.a = a
+
+
+class UncacheableIO(BaseModel):
+    a: Dummy
+
+
+class UncacheableOutputAction(Action[None, UncacheableIO]):
+    name = "uncacheable"
+
+    async def run(self, inputs: None) -> UncacheableIO:
+        return UncacheableIO(a=Dummy(1))
+
+
+class UncacheableInputAction(Action[UncacheableIO, None]):
+    name = "uncacheable_input"
+
+    async def run(self, inputs: UncacheableIO) -> None:
+        assert inputs.a.a == 1

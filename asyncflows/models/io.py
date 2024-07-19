@@ -2,6 +2,7 @@
 from typing import ClassVar, TypeVar, Union
 
 import pydantic
+from pydantic import ConfigDict
 
 from asyncflows.models.config.model import ModelConfig
 from asyncflows.models.primitives import ContextVarPath
@@ -9,7 +10,9 @@ from asyncflows.repos.blob_repo import BlobRepo
 
 
 class BaseModel(pydantic.BaseModel):
-    pass
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
 
 def Field(*args, **kwargs):

@@ -232,4 +232,12 @@ flow:
         b:
           link: add.result
 
+  uncacheable:
+    action: uncacheable
+
+  uncacheable_input:
+    action: uncacheable_input
+    a:
+      link: uncacheable.a
+
 default_output: first_sum.result

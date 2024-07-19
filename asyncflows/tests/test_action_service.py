@@ -29,6 +29,7 @@ def assert_logs(
     blobs_saved: int = 0,
     blobs_cache_checks: int = 0,
     blobs_retrieved: int = 0,
+    uncacheable_warning: bool = False,
 ):
     # ignore some logs
     # log_list[:] = [
@@ -144,6 +145,16 @@ def assert_logs(
             assert log_dict["log_level"] == "info"
             assert "wall_time" in log_dict
             assert "blocking_time" in log_dict
+
+        if uncacheable_warning:
+            log_dict = log_list.pop(0)
+            assert (
+                log_dict["event"]
+                == "Outputs contain unserializable data; not caching. Set `cache = False` to disable this warning"
+            )
+            assert log_dict["action"] == action_name
+            assert log_dict["action_id"] == action_id
+            assert log_dict["log_level"] == "warning"
 
     if assert_empty:
         assert len(log_list) == 0
@@ -806,6 +817,38 @@ async def test_loop_with_internal_dependencies(
     assert outputs == expected_outputs
 
     # TODO test unordered logs
+
+
+async def test_uncacheable_output_action(log, in_memory_action_service, log_history):
+    from .resources.actions import Dummy
+
+    action_id = action_name = "uncacheable"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+
+    outputs_dict = outputs.model_dump()
+    assert "a" in outputs_dict
+    dummy = outputs_dict["a"]
+    assert isinstance(dummy, Dummy)
+    assert dummy.a == 1
+
+    assert_logs(log_history, action_id, action_name, uncacheable_warning=True)
+
+
+async def test_uncacheable_input_action(log, in_memory_action_service, log_history):
+    first_action_id = first_action_name = "uncacheable"
+    second_action_id = second_action_name = "uncacheable_input"
+
+    await in_memory_action_service.run_action(log=log, action_id=second_action_id)
+
+    assert_logs(
+        log_history,
+        first_action_id,
+        first_action_name,
+        uncacheable_warning=True,
+        assert_empty=False,
+    )
+    assert_logs(log_history, second_action_id, second_action_name)
 
 
 # TODO test that `new_listeners` are all delivered the latest output when starting to listen while action is caching
