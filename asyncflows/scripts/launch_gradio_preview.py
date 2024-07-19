@@ -15,6 +15,7 @@ from asyncflows.models.config.flow import Loop
 from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
+from asyncflows.utils.gradio_utils import single_shot
 from asyncflows.utils.singleton_utils import TempEnvContext
 from asyncflows.utils.static_utils import get_config_variables
 
@@ -81,33 +82,6 @@ def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
     if not dotenv_path:
         return None, default_env_vars
     return dotenv_path, [(name, val or "") for name, val in dotenv_values().items()]
-
-
-def single_shot(fn, inputs, outputs):
-    # lower values make the event trigger more times
-    # while lagging even with 0.1 it might trigger multiple times
-    timer = gr.Timer(0.1)
-
-    def _(*args, **kwargs):
-        res = fn(*args, **kwargs)
-        timer_update = gr.Timer(active=False)
-        if isinstance(res, list):
-            res += [timer_update]
-        elif isinstance(res, dict):
-            res[timer] = timer_update
-        else:
-            res = [res, timer_update]
-        return res
-
-    if isinstance(outputs, list):
-        outputs += [timer]
-    elif isinstance(outputs, set):
-        outputs.add(timer)
-    else:
-        outputs = [outputs, timer]
-    timer.tick(_, inputs, outputs)
-
-    return timer
 
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
