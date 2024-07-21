@@ -11,7 +11,10 @@ from asyncflows import AsyncFlows
 from asyncflows.log_config import get_logger
 from asyncflows.models.openai_server import OpenAIChatCompletionRequest
 from asyncflows.utils.format_utils import format_value
-from asyncflows.utils.static_utils import get_config_variables
+from asyncflows.utils.rendering_utils import extract_root_var
+from asyncflows.utils.static_utils import (
+    get_variable_dependency_map,
+)
 
 
 def create_openai_app(
@@ -115,25 +118,30 @@ async def run_server(
 if __name__ == "__main__":
     import argparse
 
+    log = get_logger()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--flow", type=str, required=True)
     parser.add_argument("--target-output", type=str, required=False)
     parser.add_argument("--port", type=int, required=False)
     parser.add_argument("--host", type=str, default="0.0.0.0")
+
     args, _ = parser.parse_known_args()
 
     flow = AsyncFlows.from_file(args.flow)
+    dependency_map = get_variable_dependency_map(flow.action_config)
+    target_output = args.target_output or flow.action_config.get_default_output()
+    root_dependency = extract_root_var(target_output)
 
-    log = get_logger()
-
-    variables = get_config_variables(flow.action_config)
+    variables = dependency_map[root_dependency]
     if len(variables) > 1:
         log.error(
-            "Flow must have only one input variable (which is fulfilled by the input message)",
+            "Flow target output must have only one input variable (which is filled by the input message)",
+            target_output=target_output,
             variables=variables,
         )
         raise ValueError(
-            "Flow must have only one input variable (which is fulfilled by the input message)"
+            "Flow target output must have only one input variable (which is filled by the input message)"
         )
     if not variables:
         log.warning("No input variable specified, input messages will be ignored")
