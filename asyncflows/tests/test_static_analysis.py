@@ -6,6 +6,8 @@ from asyncflows.utils.loader_utils import load_config_file
 from asyncflows.utils.static_utils import (
     check_config_consistency,
     get_config_variables,
+    get_variable_dependency_map,
+    get_link_dependency_map,
 )
 
 
@@ -48,3 +50,73 @@ def test_static_analysis(
 def test_get_config_variables(path, expected_variables):
     config = load_config_file(path)
     assert get_config_variables(config) == expected_variables
+
+
+@pytest.mark.parametrize(
+    "path, expected_map",
+    (
+        (
+            "asyncflows/examples/hello_world.yaml",
+            {"hello_world": set()},
+        ),
+        (
+            "asyncflows/examples/chatbot.yaml",
+            {
+                "chatbot": {"pdf_filepaths", "conversation_history", "message"},
+                "extract_chatbot": {"pdf_filepaths", "conversation_history", "message"},
+                "extract_pdf_texts": {"pdf_filepaths"},
+                "extract_query": {"message"},
+                "generate_query": {"message"},
+                "reranking": {"pdf_filepaths", "message"},
+                "retrieval": {"pdf_filepaths", "message"},
+            },
+        ),
+    ),
+)
+def test_get_variable_dependency_map(path, expected_map):
+    config = load_config_file(path)
+    assert get_variable_dependency_map(config) == expected_map
+
+
+@pytest.mark.parametrize(
+    "path, expected_map",
+    (
+        (
+            "asyncflows/examples/hello_world.yaml",
+            {"hello_world": set()},
+        ),
+        (
+            "asyncflows/examples/chatbot.yaml",
+            {
+                "chatbot": {
+                    "extract_pdf_texts",
+                    "extract_query",
+                    "generate_query",
+                    "reranking",
+                    "retrieval",
+                },
+                "extract_chatbot": {
+                    "chatbot",
+                    "extract_pdf_texts",
+                    "extract_query",
+                    "generate_query",
+                    "reranking",
+                    "retrieval",
+                },
+                "extract_pdf_texts": set(),
+                "extract_query": {"generate_query"},
+                "generate_query": set(),
+                "reranking": {
+                    "extract_pdf_texts",
+                    "extract_query",
+                    "generate_query",
+                    "retrieval",
+                },
+                "retrieval": {"extract_pdf_texts", "extract_query", "generate_query"},
+            },
+        ),
+    ),
+)
+def test_get_link_dependency_map(path, expected_map):
+    config = load_config_file(path)
+    assert get_link_dependency_map(config) == expected_map

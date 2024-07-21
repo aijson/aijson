@@ -202,3 +202,45 @@ def get_config_variables(
     return set(_get_root_dependencies(config.default_model)) | get_flow_dependencies(
         config.flow
     )
+
+
+def get_dependency_map(
+    config: ActionConfig,
+) -> dict[str, set[str]]:
+    base_deps = set(_get_root_dependencies(config.default_model))
+    dependencies_for_invocation = {
+        invocation_id: get_invocation_dependencies(invocation)
+        for invocation_id, invocation in config.flow.items()
+    }
+
+    def resolve_deps(invocation_id: str) -> set[str]:
+        resolved_deps = set(dependencies_for_invocation[invocation_id])
+        for dependency in dependencies_for_invocation[invocation_id]:
+            if dependency in dependencies_for_invocation:
+                resolved_deps |= resolve_deps(dependency)
+        return resolved_deps
+
+    return {
+        invocation_id: base_deps | resolve_deps(invocation_id)
+        for invocation_id in config.flow
+    }
+
+
+def get_variable_dependency_map(
+    config: ActionConfig,
+) -> dict[str, set[str]]:
+    dependency_map = get_dependency_map(config)
+    return {
+        invocation_id: {d for d in dependencies if d not in config.flow}
+        for invocation_id, dependencies in dependency_map.items()
+    }
+
+
+def get_link_dependency_map(
+    config: ActionConfig,
+) -> dict[str, set[str]]:
+    dependency_map = get_dependency_map(config)
+    return {
+        invocation_id: {d for d in dependencies if d in config.flow}
+        for invocation_id, dependencies in dependency_map.items()
+    }

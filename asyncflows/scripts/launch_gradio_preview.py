@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Collection
 from unittest import mock
 
 from asyncflows import AsyncFlows, ShelveCacheRepo
@@ -20,8 +21,12 @@ from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
 from asyncflows.utils.gradio_utils import single_shot
 from asyncflows.utils.pydantic_utils import is_basemodel_subtype
+from asyncflows.utils.rendering_utils import extract_root_var
 from asyncflows.utils.singleton_utils import TempEnvContext
-from asyncflows.utils.static_utils import get_config_variables
+from asyncflows.utils.static_utils import (
+    get_config_variables,
+    get_link_dependency_map,
+)
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -40,6 +45,15 @@ footer {visibility: hidden}
 
 .my-square-button {
   height: 100%;
+}
+
+.my-square-column-button {
+  width: 100%;
+}
+
+.my-compact-column {
+  min-width: auto !important;
+  flex-grow: 0 !important;
 }
 
 .my-centered-container {
@@ -104,6 +118,7 @@ def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
+    dependency_map = get_link_dependency_map(flow.action_config)
 
     with gr.Blocks(analytics_enabled=False, css=css, js=js) as preview:
         dotenv_path, env_vars = get_default_env_vars()
@@ -197,10 +212,11 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             for variable_name in variables
         }
 
-        submit_button = gr.Button("Submit", key="__submit_button")
+        submit_button = gr.Button("Run All", key="__submit_button")
 
         # build action outputs
         action_output_components = {}
+        run_buttons = {}
         for action_id, action_invocation in flow.action_config.flow.items():
             # TODO handle loop
             if isinstance(action_invocation, Loop):
@@ -214,77 +230,111 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             continue
                         full_output_name = f"{action_id}.{output_name}"
                         with gr.Tab(output_name):
-                            if is_basemodel_subtype(output_field.annotation):
-                                component = gr.JSON(
-                                    show_label=False,
-                                    key=full_output_name,
-                                )
-                            else:
-                                component = gr.Markdown(
-                                    show_label=False,
-                                    key=full_output_name,
-                                    line_breaks=True,
-                                )
-                            action_output_components[full_output_name] = component
+                            with gr.Row():
+                                if is_basemodel_subtype(output_field.annotation):
+                                    component = gr.JSON(
+                                        show_label=False,
+                                        key=full_output_name,
+                                    )
+                                else:
+                                    component = gr.Markdown(
+                                        show_label=False,
+                                        key=full_output_name,
+                                        line_breaks=True,
+                                    )
+                                action_output_components[full_output_name] = component
+                                with gr.Column(elem_classes=["my-compact-column"]):
+                                    run_button = gr.Button(
+                                        "▶️",
+                                        # elem_classes=["my-square-column-button"],
+                                    )
+                                    run_buttons[full_output_name] = run_button
+                                    # serve = gr.Button(
+                                    #     "⬆️",
+                                    #     # elem_classes=["my-square-column-button"],
+                                    # )
 
-        async def handle_submit(env_var_tuples, *args):
-            # TODO handle non-string inputs and outputs
-            # Clear the output fields
-            yield {
-                output_component: "{}" if isinstance(output_component, gr.JSON) else ""
-                for output_component in action_output_components.values()
-            }
+        def create_run_func(queued_action_ids: Collection[str]):
+            async def _(env_var_tuples, *args):
+                print("START")
+                # TODO handle non-string inputs and outputs
+                # Clear the output fields
+                yield {
+                    output_component: "{}"
+                    if isinstance(output_component, gr.JSON)
+                    else ""
+                    for target_output, output_component in action_output_components.items()
+                    if extract_root_var(target_output) in queued_action_ids
+                }
 
-            # Set the variables
-            kwargs = {}
-            for variable_name, arg in zip(variables, args):
-                try:
-                    val = json.loads(arg)
-                except json.JSONDecodeError:
-                    val = arg
-                kwargs[variable_name] = val
-            ready_flow = flow.set_vars(**kwargs)
+                # Set the variables
+                kwargs = {}
+                for variable_name, arg in zip(variables, args):
+                    try:
+                        val = json.loads(arg)
+                    except json.JSONDecodeError:
+                        val = arg
+                    kwargs[variable_name] = val
+                ready_flow = flow.set_vars(**kwargs)
 
-            target_outputs_and_agens = []
-            for output_target in action_output_components:
-                target_outputs_and_agens.append(
-                    (
-                        output_target,
-                        ready_flow.stream(output_target),
+                target_outputs_and_agens = []
+                for output_target in action_output_components:
+                    root_dependency = extract_root_var(output_target)
+                    if root_dependency not in queued_action_ids:
+                        continue
+                    target_outputs_and_agens.append(
+                        (
+                            output_target,
+                            ready_flow.stream(output_target),
+                        )
                     )
+
+                # Prepare the environment variables
+                env_var_dict = {k: v for k, v in env_var_tuples if k and v}
+                context = TempEnvContext(env_var_dict)
+
+                task_id = str(uuid.uuid4())
+                _task_cancelled[task_id] = False
+
+                # Stream the variables
+                merge = merge_iterators(
+                    log,
+                    *zip(*target_outputs_and_agens),
+                    raise_=True,
                 )
+                with context:
+                    async for target_output, outputs in merge:
+                        if _task_cancelled[task_id]:
+                            del _task_cancelled[task_id]
+                            return
 
-            # Prepare the environment variables
-            env_var_dict = {k: v for k, v in env_var_tuples if k and v}
-            context = TempEnvContext(env_var_dict)
+                        output_component = action_output_components[target_output]
+                        if not outputs and isinstance(output_component, gr.JSON):
+                            formatted_value = "{}"
+                        else:
+                            formatted_value = format_value(outputs)
+                        yield {output_component: formatted_value}
 
-            task_id = str(uuid.uuid4())
-            _task_cancelled[task_id] = False
-
-            # Stream the variables
-            merge = merge_iterators(
-                log,
-                *zip(*target_outputs_and_agens),
-                raise_=True,
-            )
-            with context:
-                async for target_output, outputs in merge:
-                    if _task_cancelled[task_id]:
-                        del _task_cancelled[task_id]
-                        return
-
-                    output_component = action_output_components[target_output]
-                    if not outputs and isinstance(output_component, gr.JSON):
-                        formatted_value = "{}"
-                    else:
-                        formatted_value = format_value(outputs)
-                    yield {output_component: formatted_value}
+            return _
 
         submit_button.click(
-            handle_submit,
+            create_run_func(flow.action_config.flow),
             inputs=[env_var_state] + list(variable_textboxes.values()),
             outputs=list(action_output_components.values()),
         )
+        for run_button_output, run_button in run_buttons.items():
+            action_id = extract_root_var(run_button_output)
+            relevant_action_ids = dependency_map[action_id] | {action_id}
+            output_components = [
+                component
+                for target_output, component in action_output_components.items()
+                if extract_root_var(target_output) in relevant_action_ids
+            ]
+            run_button.click(
+                create_run_func(relevant_action_ids),
+                inputs=[env_var_state] + list(variable_textboxes.values()),
+                outputs=output_components,
+            )
 
     return preview
 
