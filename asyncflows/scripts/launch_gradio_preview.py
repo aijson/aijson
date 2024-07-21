@@ -578,24 +578,24 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
 
     reload_thread.running_reload = True
 
+    watch_files = [Path(watch_file_path), Path(__file__)]
+
     def get_changes() -> Path | None:
-        nonlocal last_mtime
+        for file in watch_files:
+            try:
+                mtime = file.stat().st_mtime
+            except OSError:  # pragma: nocover
+                continue
 
-        file = Path(watch_file_path)
-
-        try:
-            mtime = file.stat().st_mtime
-        except OSError:  # pragma: nocover
-            return None
-
-        if last_mtime is None:
-            last_mtime = mtime
-            return None
-        elif mtime > last_mtime:
-            return file
+            old_time = mtimes.get(file)
+            if old_time is None:
+                mtimes[file] = mtime
+                continue
+            elif mtime > old_time:
+                return file
         return None
 
-    last_mtime: float | None = None
+    mtimes: dict[Path, float] = {}
     # Need to import the module in this thread so that the
     # module is available in the namespace of this thread
     # (not actually cus it's the same module as this file – the exec and getattr are also commented out due to this)
@@ -609,10 +609,12 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
                 for task_id in _task_cancelled:
                     _task_cancelled[task_id] = True
 
+                # TODO watch action files and reload upon change
+
+
                 changed_demo_file = _remove_no_reload_codeblocks(
                     str(reloader.demo_file)
                 )
-
                 # exec(changed_demo_file, module.__dict__)
                 exec(changed_demo_file, globals())
             except Exception:
@@ -621,14 +623,14 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
                     f"Reloading {reloader.watch_module_name} failed with the following exception: "
                 )
                 traceback.print_exc()
-                last_mtime = None
+                mtimes = {}
                 reloader.alert_change("error")
                 reloader.app.reload_error_message = traceback.format_exc()
                 continue
             # demo = getattr(module, reloader.demo_name)
             demo = globals()[reloader.demo_name]
             reloader.swap_blocks(demo)
-            last_mtime = None
+            mtimes = {}
         time.sleep(0.05)
 
 
