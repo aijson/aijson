@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import contextlib
 import json
 import os
@@ -16,6 +17,7 @@ from asyncflows import AsyncFlows, ShelveCacheRepo
 from asyncflows.log_config import get_logger
 from asyncflows.models.config.flow import Loop
 from asyncflows.repos.cache_repo import CacheRepo
+from asyncflows.scripts.serve_openai import find_open_port, create_server
 from asyncflows.utils.action_utils import get_actions_dict
 from asyncflows.utils.async_utils import merge_iterators
 from asyncflows.utils.format_utils import format_value
@@ -103,9 +105,13 @@ def _construct_cache_repo():
     return ShelveCacheRepo(temp_dir=TemporaryDirectory().name)
 
 
-_cache_repo = _restore_value("_cache_repo") or _construct_cache_repo()
+_cache_repo: CacheRepo = _restore_value("_cache_repo") or _construct_cache_repo()
 
-_task_cancelled = _restore_value("_task_cancelled") or {}
+_task_cancelled: dict[str, bool] = _restore_value("_task_cancelled") or {}
+
+_openai_server = _restore_value("_openai_server")
+
+_serve_openai_task: asyncio.Task | None = _restore_value("_serve_openai_task")
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -214,6 +220,79 @@ def _construct_env_var_controls(
         )
 
 
+def _construct_serve_openai_controls(
+    log,
+    flow: AsyncFlows,
+    target_outputs: list[str],
+    variable_textboxes: dict[str, gr.Textbox],
+):
+    async def serve(input_msg_var, target_output, *variable_values):
+        global _serve_openai_task
+        global _openai_server
+
+        variable_values = {
+            name: val for name, val in zip(variable_textboxes, variable_values)
+        }
+        del variable_values[input_msg_var]
+
+        flow_with_vars = flow.set_vars(**variable_values)
+
+        if _openai_server is not None:
+            _openai_server.should_exit = True
+        if _serve_openai_task is not None:
+            pass
+            # canceling here prevents the shutdown triggered above
+            # _serve_openai_task.cancel()
+
+        host = "0.0.0.0"
+        port = find_open_port()
+
+        # TODO refactor this to dynamically creating a flow calling a subflow
+        #  and running in a subprocess
+
+        _openai_server = await create_server(
+            flow_with_vars,
+            input_var_name=input_msg_var,
+            target_output=target_output,
+            host=host,
+            port=port,
+        )
+        _serve_openai_task = asyncio.create_task(_openai_server.serve())
+
+        url = f"http://{host}:{port}"
+        return f"Serve OpenAI compatible API on: {url}"
+
+    gr.Markdown(
+        "Serve an OpenAI-compatible Chat API:\n"
+        "- using the variable values specified below\n"
+        "- replacing the `Message Input` variable's value with the last message of the prompt\n"
+        "- returning as a completion the `Target Output`"
+    )
+
+    input_msg_dropdown = gr.Dropdown(
+        choices=list(variable_textboxes),
+        value=list(variable_textboxes)[0],
+        label="Message Input",
+    )
+    target_output_dropdown = gr.Dropdown(
+        choices=target_outputs,  # type: ignore  # gradio should be using Sequence here
+        value=flow.action_config.get_default_output(),
+        label="Target Output",
+    )
+    serve_button = gr.Button("Serve")
+    status_box = gr.Textbox(label="Status", interactive=False)
+    serve_button.click(
+        serve,
+        inputs=[
+            input_msg_dropdown,
+            target_output_dropdown,
+            *variable_textboxes.values(),
+        ],
+        outputs=status_box,
+    )
+    # TODO export config button, once subflows are in
+
+
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
     dependency_map = get_link_dependency_map(flow.action_config)
@@ -225,6 +304,29 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         env_var_state = gr.State(env_vars)
         reload_state = gr.State(0)
         single_shot(lambda i: i + 1, reload_state, reload_state)
+
+        # build variable inputs
+        variable_textboxes = {
+            variable_name: gr.Textbox(
+                label=variable_name, interactive=True, key=variable_name, render=False
+            )
+            for variable_name in variables
+        }
+
+        # build list of target outputs
+        legal_target_outputs = []
+        for action_id, action_invocation in flow.action_config.flow.items():
+            # TODO handle loop
+            if isinstance(action_invocation, Loop):
+                continue
+            legal_target_outputs.append(action_id)
+            action = actions_dict[action_invocation.action]
+            outputs_type = action._get_outputs_type(action_invocation)
+            for output_name, output_field in outputs_type.model_fields.items():
+                if output_field.deprecated:
+                    continue
+                full_output_name = f"{action_id}.{output_name}"
+                legal_target_outputs.append(full_output_name)
 
         # build options
         with gr.Accordion("Options", open=False):
@@ -238,14 +340,17 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                         reload_state=reload_state,
                         env_var_state=env_var_state,
                     )
+                with gr.Tab("Serve OpenAI"):
+                    _construct_serve_openai_controls(
+                        log,
+                        flow=flow,
+                        target_outputs=legal_target_outputs,
+                        variable_textboxes=variable_textboxes,
+                    )
 
-        # build variable inputs
-        variable_textboxes = {
-            variable_name: gr.Textbox(
-                label=variable_name, interactive=True, key=variable_name
-            )
-            for variable_name in variables
-        }
+        # render variable inputs
+        for box in variable_textboxes.values():
+            box.render()
 
         submit_button = gr.Button("Run All", key="__submit_button")
 

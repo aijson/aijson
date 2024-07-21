@@ -3,7 +3,6 @@ import json
 import socket
 import time
 
-
 from fastapi.responses import StreamingResponse
 from fastapi import FastAPI, HTTPException
 
@@ -89,7 +88,7 @@ def find_open_port(start_port: int | None = None, max_tries: int = 50) -> int:
     raise RuntimeError("Failed to find open port")
 
 
-async def run_server(
+async def create_server(
     flow: AsyncFlows,
     input_var_name: str | None = None,
     host: str = "0.0.0.0",
@@ -108,7 +107,23 @@ async def run_server(
         port=port,
         # log_level="info",
     )
-    server = uvicorn.Server(config)
+    return uvicorn.Server(config)
+
+
+async def run_server(
+    flow: AsyncFlows,
+    input_var_name: str | None = None,
+    host: str = "0.0.0.0",
+    port: int | None = None,
+    target_output: str | None = None,
+):
+    server = await create_server(
+        flow=flow,
+        input_var_name=input_var_name,
+        host=host,
+        port=port,
+        target_output=target_output,
+    )
 
     url = f"http://{host}:{port}"
     print(f"Running OpenAI compatible API on: {url}")
