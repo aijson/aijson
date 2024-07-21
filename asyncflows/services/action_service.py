@@ -727,6 +727,9 @@ class ActionService:
                 self._broadcast_outputs(log, task_id, outputs)
                 continue
 
+            # Run the action
+            # TODO signal that `action_id` has started running from here
+
             # TODO rework this to handle partial outputs, not just full output objects
             async for outputs in self._run_action(
                 log=log,
