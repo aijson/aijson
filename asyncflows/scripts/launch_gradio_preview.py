@@ -4,6 +4,7 @@ import json
 import os
 import time
 import traceback
+import uuid
 from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
@@ -76,11 +77,19 @@ default_env_vars = [
     ("ANTHROPIC_API_KEY", ""),
 ]
 
-if "_cache_repo" in globals():
-    # to persist reloads
-    _cache_repo = globals()["_cache_repo"]
-else:
-    _cache_repo = ShelveCacheRepo(temp_dir=TemporaryDirectory().name)
+
+def _restore_value(name: str):
+    # to persist `reload_module` calls
+    if name in globals():
+        return globals()[name]
+    return None
+
+
+_cache_repo = _restore_value("_cache_repo") or ShelveCacheRepo(
+    temp_dir=TemporaryDirectory().name
+)
+
+_task_cancelled = _restore_value("_task_cancelled") or {}
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -249,6 +258,9 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             env_var_dict = {k: v for k, v in env_var_tuples if k and v}
             context = TempEnvContext(env_var_dict)
 
+            task_id = str(uuid.uuid4())
+            _task_cancelled[task_id] = False
+
             # Stream the variables
             merge = merge_iterators(
                 log,
@@ -257,6 +269,10 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             )
             with context:
                 async for target_output, outputs in merge:
+                    if _task_cancelled[task_id]:
+                        del _task_cancelled[task_id]
+                        return
+
                     output_component = action_output_components[target_output]
                     if not outputs and isinstance(output_component, gr.JSON):
                         formatted_value = "{}"
@@ -336,6 +352,10 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
         if changed:
             # print(f"Changes detected in: {changed}")
             try:
+                # cancel running tasks
+                for task_id in _task_cancelled:
+                    _task_cancelled[task_id] = True
+
                 changed_demo_file = _remove_no_reload_codeblocks(
                     str(reloader.demo_file)
                 )
