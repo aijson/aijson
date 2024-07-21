@@ -68,20 +68,101 @@ footer {visibility: hidden}
   text-align: center;
 }
 
-.my-pending-action {
-  background-color: purple;
+
+@keyframes spinner {
+  100% {
+    transform: rotate(-360deg);
+  }
 }
 
-.my-running-action {
-  background-color: orange;
+
+@keyframes bounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-.my-succeeded-action {
-  background-color: green;
+.my-status-indicator > button::before {
+    height: 20px;
+    width: 20px;
+    content: '';
+    margin-right: -20px;
+    display: inline-block;
+    left: 50%;
+    top: 50%;
+    border-radius: 20%;
+      /* animation: spinner 0.1s linear infinite; */
+  /* animation: bounce 0.1s linear; */
+  /* transform: translate(-50%, -50%) rotate(0deg); */
 }
 
-.my-failed-action {
-  background-color: red;
+.my-ready-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #eeeeee 0deg,
+    #d4d4d4 120deg,
+    #b7b7b7 240deg,
+    #eeeeee 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+    /* animation: spinner 0.1s linear infinite; */
+  animation: bounce 0.1s linear;
+}
+
+.my-pending-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #543ee1 0deg,
+    #7074e3 120deg,
+    #7b4bcf 240deg,
+    #543ee1 360deg
+  );
+  /* animation: spinner 0.1s linear infinite; */
+  animation: bounce 0.1s linear;
+}
+
+.my-running-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #f4ac1d 0deg,
+    #f68011 120deg,
+    #d4b82b 240deg,
+    #f4ac1d 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: spinner 0.5s linear infinite;
+  /* animation: bounce 0.1s linear; */
+}
+
+
+.my-succeeded-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #10be3f 0deg,
+    #8cd474 120deg,
+    #59cc47 240deg,
+    #10be3f 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: bounce 0.1s linear;
+}
+
+.my-failed-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #e61bc5 0deg,
+    #e78aba 120deg,
+    #d02f9e 240deg,
+    #e61bc5 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: bounce 0.1s linear;
 }
 """
 
@@ -113,6 +194,7 @@ default_env_vars = [
 
 
 class ActionStatus(str, Enum):
+    READY = "my-ready-action"
     PENDING = "my-pending-action"
     RUNNING = "my-running-action"
     SUCCEEDED = "my-succeeded-action"
@@ -390,7 +472,13 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 continue
             action = actions_dict[action_invocation.action]
             outputs_type = action._get_outputs_type(action_invocation)
-            with gr.Accordion(action_id) as action_accordion:
+            with gr.Accordion(
+                action_id,
+                elem_classes=[
+                    "my-status-indicator",
+                    ActionStatus.READY.value,
+                ],
+            ) as action_accordion:
                 with gr.Tabs():
                     for output_name, output_field in outputs_type.model_fields.items():
                         if output_field.deprecated:
@@ -424,7 +512,6 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
 
         def create_run_func(queued_action_ids: Collection[str]):
             async def _(env_var_tuples, *args):
-                print("START")
                 # TODO handle non-string inputs and outputs
                 # Clear the output fields
                 yield {
@@ -464,7 +551,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 # set action statuses (queued)
                 yield {
                     action_accordions[action_id]: gr.Accordion(
-                        elem_classes=[action_status.value],
+                        elem_classes=["my-status-indicator", action_status.value],
                     )
                     for action_id, action_status in action_statuses.items()
                 }
@@ -504,7 +591,10 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             action_statuses[action_id] = new_status
                             yield {
                                 action_accordions[action_id]: gr.Accordion(
-                                    elem_classes=[action_statuses[action_id].value]
+                                    elem_classes=[
+                                        "my-status-indicator",
+                                        action_statuses[action_id].value,
+                                    ]
                                 )
                             }
 
@@ -528,11 +618,13 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         for run_button_output, run_button in run_buttons.items():
             action_id = extract_root_var(run_button_output)
             relevant_action_ids = dependency_map[action_id] | {action_id}
-            output_components = [
-                component
-                for target_output, component in action_output_components.items()
-                if extract_root_var(target_output) in relevant_action_ids
-            ]
+            output_components = []
+            for target_output, component in action_output_components.items():
+                action_id = extract_root_var(target_output)
+                if action_id not in relevant_action_ids:
+                    continue
+                output_components.append(component)
+                output_components.append(action_accordions[action_id])
             run_button.click(
                 create_run_func(relevant_action_ids),
                 inputs=[env_var_state] + list(variable_textboxes.values()),
@@ -610,7 +702,6 @@ def watchfn(watch_file_path: str, reloader: SourceFileReloader):
                     _task_cancelled[task_id] = True
 
                 # TODO watch action files and reload upon change
-
 
                 changed_demo_file = _remove_no_reload_codeblocks(
                     str(reloader.demo_file)
