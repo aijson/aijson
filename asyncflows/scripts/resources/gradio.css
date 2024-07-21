@@ -1,0 +1,124 @@
+footer {visibility: hidden}
+
+.my-center-flex {
+  gap: 0px;
+  justify-content: center;
+}
+
+.my-square-button {
+  height: 100%;
+}
+
+.my-square-column-button {
+  width: 100%;
+}
+
+.my-compact-column {
+  min-width: auto !important;
+  flex-grow: 0 !important;
+}
+
+.my-centered-container {
+  align-items: center;
+}
+
+.my-centered-text {
+  text-align: center;
+}
+
+
+@keyframes spinner {
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+
+@keyframes bounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.my-status-indicator > button::before {
+    height: 20px;
+    width: 20px;
+    content: '';
+    margin-right: -20px;
+    display: inline-block;
+    left: 50%;
+    top: 50%;
+    border-radius: 20%;
+      /* animation: spinner 0.1s linear infinite; */
+  /* animation: bounce 0.1s linear; */
+  /* transform: translate(-50%, -50%) rotate(0deg); */
+}
+
+.my-ready-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #eeeeee 0deg,
+    #d4d4d4 120deg,
+    #b7b7b7 240deg,
+    #eeeeee 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+    /* animation: spinner 0.1s linear infinite; */
+  animation: bounce 0.1s linear;
+}
+
+.my-pending-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #543ee1 0deg,
+    #7074e3 120deg,
+    #7b4bcf 240deg,
+    #543ee1 360deg
+  );
+  /* animation: spinner 0.1s linear infinite; */
+  animation: bounce 0.1s linear;
+}
+
+.my-running-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #f4ac1d 0deg,
+    #f68011 120deg,
+    #d4b82b 240deg,
+    #f4ac1d 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: spinner 0.5s linear infinite;
+  /* animation: bounce 0.1s linear; */
+}
+
+
+.my-succeeded-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #10be3f 0deg,
+    #8cd474 120deg,
+    #59cc47 240deg,
+    #10be3f 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: bounce 0.1s linear;
+}
+
+.my-failed-action > button::before {
+  background: conic-gradient(
+    from -160deg at 50% 50%,
+    #e61bc5 0deg,
+    #e78aba 120deg,
+    #d02f9e 240deg,
+    #e61bc5 360deg
+    /* rgba(42, 138, 246, 0) 360deg */
+  );
+  animation: bounce 0.1s linear;
+}
