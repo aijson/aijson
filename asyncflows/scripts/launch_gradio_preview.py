@@ -113,7 +113,104 @@ def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
     dotenv_path = find_dotenv()
     if not dotenv_path:
         return None, default_env_vars
-    return dotenv_path, [(name, val or "") for name, val in dotenv_values().items()]
+    presented_vars = [(name, val or "") for name, val in dotenv_values().items()]
+    for name, val in default_env_vars:
+        if not any(t[0] == name for t in presented_vars):
+            presented_vars.append((name, val))
+    return dotenv_path, presented_vars
+
+
+def _construct_env_var_controls(
+    log, dotenv_path: str | None, reload_state: gr.State, env_var_state: gr.State
+):
+    def update_env_var_state(*args):
+        if len(args) // 2 != len(args) / 2:
+            raise RuntimeError("Number of env var state update should be even")
+
+        return [(k, v) for k, v in zip(args[::2], args[1::2])]
+
+    if dotenv_path is not None:
+        dotenv_message = f"Loaded from `{dotenv_path}`"
+    else:
+        dotenv_message = "If you put a `.env` file in the current directory, these will load automatically."
+    gr.Markdown(dotenv_message)
+
+    @gr.render(inputs=env_var_state, triggers=[reload_state.change])
+    def render_env_vars(env_var_tuples):
+        fields = []
+        delete_buttons = []
+        for i, (k, v) in enumerate(env_var_tuples):
+            with gr.Row(elem_classes=["my-centered-container"]):
+                key_field = gr.Textbox(
+                    k,
+                    # label="Key",
+                    show_label=False,
+                    scale=1,
+                    min_width=200,
+                )
+                value_field = gr.Textbox(
+                    v,
+                    # label="Value",
+                    type="password",
+                    show_label=False,
+                    scale=3,
+                    min_width=20,
+                )
+                fields.extend((key_field, value_field))
+                with gr.Column(
+                    scale=0, min_width=16, elem_classes=["my-center-flex"]
+                ):
+                    gr.Markdown(
+                        "👁️",
+                        elem_classes=["my-centered-text"],
+                    )
+                    cb = gr.Checkbox(
+                        False,
+                        show_label=False,
+                        container=False,
+                        label="",
+                        scale=0,
+                        min_width=1,
+                    )
+                    cb.change(
+                        lambda t: gr.Textbox(type="text" if t else "password"),
+                        cb,
+                        value_field,
+                    )
+                delete_button = gr.Button(
+                    "-",
+                    scale=0,
+                    min_width=20,
+                    elem_classes=["my-square-button"],
+                )
+                delete_buttons.append(delete_button)
+        for field in fields:
+            field.change(update_env_var_state, fields, env_var_state)
+        for i, button in enumerate(delete_buttons):
+            remaining_fields = fields[0 : i * 2] + fields[i * 2 + 2 : len(fields)]
+            button.click(
+                update_env_var_state, remaining_fields, env_var_state
+            ).then(lambda i: i + 1, reload_state, reload_state)
+
+    with gr.Row():
+        add_button = gr.Button("+")
+        add_button.click(
+            lambda ts: ts + [("", "")], env_var_state, env_var_state
+        ).then(lambda i: i + 1, reload_state, reload_state)
+
+
+def _construct_options(
+    log, dotenv_path: str | None, reload_state: gr.State, env_var_state: gr.State
+):
+    with gr.Accordion("Options", open=False):
+        with gr.Tabs():
+            with gr.Tab("Environment Variables"):
+                _construct_env_var_controls(
+                    log,
+                    dotenv_path=dotenv_path,
+                    reload_state=reload_state,
+                    env_var_state=env_var_state,
+                )
 
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
@@ -128,81 +225,8 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         reload_state = gr.State(0)
         single_shot(lambda i: i + 1, reload_state, reload_state)
 
-        def update_env_var_state(*args):
-            if len(args) // 2 != len(args) / 2:
-                raise RuntimeError("Number of env var state update should be even")
-
-            return [(k, v) for k, v in zip(args[::2], args[1::2])]
-
-        # build env var accordion
-        env_var_label = "Environment Variables"
-        if dotenv_path is not None:
-            env_var_label += f" (loaded from `{dotenv_path}`)"
-        with gr.Accordion(env_var_label, open=False):
-
-            @gr.render(inputs=env_var_state, triggers=[reload_state.change])
-            def render_env_vars(env_var_tuples):
-                fields = []
-                delete_buttons = []
-                for i, (k, v) in enumerate(env_var_tuples):
-                    with gr.Row(elem_classes=["my-centered-container"]):
-                        key_field = gr.Textbox(
-                            k,
-                            # label="Key",
-                            show_label=False,
-                            scale=1,
-                            min_width=200,
-                        )
-                        value_field = gr.Textbox(
-                            v,
-                            # label="Value",
-                            type="password",
-                            show_label=False,
-                            scale=3,
-                        )
-                        fields.extend((key_field, value_field))
-                        with gr.Column(
-                            scale=0, min_width=16, elem_classes=["my-center-flex"]
-                        ):
-                            gr.Markdown(
-                                "👁️",
-                                elem_classes=["my-centered-text"],
-                            )
-                            cb = gr.Checkbox(
-                                False,
-                                show_label=False,
-                                container=False,
-                                label="",
-                                scale=0,
-                                min_width=1,
-                            )
-                            cb.change(
-                                lambda t: gr.Textbox(type="text" if t else "password"),
-                                cb,
-                                value_field,
-                            )
-                        delete_button = gr.Button(
-                            "-",
-                            scale=0,
-                            min_width=20,
-                            elem_classes=["my-square-button"],
-                        )
-                        delete_buttons.append(delete_button)
-                for field in fields:
-                    field.change(update_env_var_state, fields, env_var_state)
-                for i, button in enumerate(delete_buttons):
-                    remaining_fields = (
-                        fields[0 : i * 2] + fields[i * 2 + 2 : len(fields)]
-                    )
-                    button.click(
-                        update_env_var_state, remaining_fields, env_var_state
-                    ).then(lambda i: i + 1, reload_state, reload_state)
-
-            with gr.Row():
-                add_button = gr.Button("+")
-                add_button.click(
-                    lambda ts: ts + [("", "")], env_var_state, env_var_state
-                ).then(lambda i: i + 1, reload_state, reload_state)
+        # build options
+        _construct_options(log, dotenv_path, reload_state, env_var_state)
 
         # build variable inputs
         variable_textboxes = {
