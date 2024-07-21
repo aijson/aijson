@@ -99,9 +99,11 @@ def _restore_value(name: str):
     return None
 
 
-_cache_repo = _restore_value("_cache_repo") or ShelveCacheRepo(
-    temp_dir=TemporaryDirectory().name
-)
+def _construct_cache_repo():
+    return ShelveCacheRepo(temp_dir=TemporaryDirectory().name)
+
+
+_cache_repo = _restore_value("_cache_repo") or _construct_cache_repo()
 
 _task_cancelled = _restore_value("_task_cancelled") or {}
 
@@ -118,6 +120,21 @@ def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
         if not any(t[0] == name for t in presented_vars):
             presented_vars.append((name, val))
     return dotenv_path, presented_vars
+
+
+def _construct_general_settings(log):
+    # TODO allow use of redis for cache
+    gr.Markdown(
+        "All outputs are cached by default. If you'd like to generate new outputs for the same inputs:"
+    )
+    reset_cache = gr.Button("Clear cache")
+
+    @reset_cache.click
+    async def _():
+        # TODO keep track of and cleanup temp dirs
+        # old_temp_dir = _cache_repo.temp_dir
+        _cache_repo.temp_dir = TemporaryDirectory().name
+        gr.Info("Cache cleared")
 
 
 def _construct_env_var_controls(
@@ -157,9 +174,7 @@ def _construct_env_var_controls(
                     min_width=20,
                 )
                 fields.extend((key_field, value_field))
-                with gr.Column(
-                    scale=0, min_width=16, elem_classes=["my-center-flex"]
-                ):
+                with gr.Column(scale=0, min_width=16, elem_classes=["my-center-flex"]):
                     gr.Markdown(
                         "👁️",
                         elem_classes=["my-centered-text"],
@@ -188,29 +203,15 @@ def _construct_env_var_controls(
             field.change(update_env_var_state, fields, env_var_state)
         for i, button in enumerate(delete_buttons):
             remaining_fields = fields[0 : i * 2] + fields[i * 2 + 2 : len(fields)]
-            button.click(
-                update_env_var_state, remaining_fields, env_var_state
-            ).then(lambda i: i + 1, reload_state, reload_state)
+            button.click(update_env_var_state, remaining_fields, env_var_state).then(
+                lambda i: i + 1, reload_state, reload_state
+            )
 
     with gr.Row():
         add_button = gr.Button("+")
-        add_button.click(
-            lambda ts: ts + [("", "")], env_var_state, env_var_state
-        ).then(lambda i: i + 1, reload_state, reload_state)
-
-
-def _construct_options(
-    log, dotenv_path: str | None, reload_state: gr.State, env_var_state: gr.State
-):
-    with gr.Accordion("Options", open=False):
-        with gr.Tabs():
-            with gr.Tab("Environment Variables"):
-                _construct_env_var_controls(
-                    log,
-                    dotenv_path=dotenv_path,
-                    reload_state=reload_state,
-                    env_var_state=env_var_state,
-                )
+        add_button.click(lambda ts: ts + [("", "")], env_var_state, env_var_state).then(
+            lambda i: i + 1, reload_state, reload_state
+        )
 
 
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
@@ -226,7 +227,17 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
         single_shot(lambda i: i + 1, reload_state, reload_state)
 
         # build options
-        _construct_options(log, dotenv_path, reload_state, env_var_state)
+        with gr.Accordion("Options", open=False):
+            with gr.Tabs():
+                with gr.Tab("General"):
+                    _construct_general_settings(log)
+                with gr.Tab("Environment Variables"):
+                    _construct_env_var_controls(
+                        log,
+                        dotenv_path=dotenv_path,
+                        reload_state=reload_state,
+                        env_var_state=env_var_state,
+                    )
 
         # build variable inputs
         variable_textboxes = {
