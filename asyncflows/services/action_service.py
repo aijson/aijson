@@ -1,6 +1,8 @@
 import asyncio
+import json
 import traceback
 from collections import defaultdict
+from json import JSONDecodeError
 from typing import Any, AsyncIterator, Iterable
 
 from pydantic_core import PydanticSerializationError
@@ -44,12 +46,13 @@ from asyncflows.utils.async_utils import (
     measure_coro,
     measure_async_iterator,
 )
-from asyncflows.utils.pydantic_utils import iterate_fields
+from asyncflows.utils.pydantic_utils import iterate_fields, is_basemodel_subtype
 from asyncflows.utils.redis_utils import get_redis_url
 from asyncflows.utils.sentinel_utils import is_sentinel, Sentinel, is_set_of_tuples
 
 ActionSubclass = InternalActionBase[Any, Any]
-Inputs = Outputs = BaseModel
+Inputs = BaseModel
+Outputs = BaseModel | Any
 
 
 class ActionService:
@@ -552,21 +555,25 @@ class ActionService:
                 )
                 outputs_json = None
             if outputs_json is not None:
-                outputs_type: BaseModel = action_type._get_outputs_type(
-                    action_invocation
-                )
+                outputs_type = action_type._get_outputs_type(action_invocation)
                 try:
-                    outputs = outputs_type.model_validate_json(outputs_json)
-                    if not await self._contains_expired_blobs(log, outputs):
-                        log.info("Cache hit")
-                        return outputs
+                    if is_basemodel_subtype(outputs_type):
+                        outputs = outputs_type.model_validate_json(outputs_json)
+                        if await self._contains_expired_blobs(log, outputs):
+                            log.info("Cache hit but blobs expired")
+                            return None
+                        else:
+                            log.info("Cache hit")
                     else:
-                        log.info("Cache hit but blobs expired")
-                except ValidationError as e:
+                        outputs = json.loads(outputs_json)
+                        log.info("Cache hit")
+                    return outputs
+                except (ValidationError, JSONDecodeError) as e:
                     log.warning(
                         "Cache hit but outputs invalid",
                         exc_info=e,
                     )
+
             else:
                 log.info("Cache miss")
         else:
@@ -625,14 +632,22 @@ class ActionService:
         action_name: str,
         action_type: type[ActionSubclass],
     ):
-        try:
-            outputs_json = outputs.model_dump_json()
-        except PydanticSerializationError:
-            log.warning(
-                "Outputs contain unserializable data; not caching. Set `cache = False` to disable this warning"
-            )
-            return
-
+        if isinstance(outputs, BaseModel):
+            try:
+                outputs_json = outputs.model_dump_json()
+            except PydanticSerializationError:
+                log.warning(
+                    "Outputs contain unserializable data; not caching. Set `cache = False` to disable this warning"
+                )
+                return
+        else:
+            try:
+                outputs_json = json.dumps(outputs)
+            except TypeError:
+                log.warning(
+                    "Outputs contain unserializable data; not caching. Set `cache = False` to disable this warning"
+                )
+                return
         log.debug("Caching result")
         try:
             await self.cache_repo.store(

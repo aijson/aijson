@@ -240,4 +240,23 @@ flow:
     a:
       link: uncacheable.a
 
+  int_add:
+    action: int_add
+    a: 1
+    b: 2
+
+  int_add_2:
+    action: int_add
+    a: 1
+    b:
+      link: int_add
+
+  uncacheable_non_model_output:
+    action: uncacheable_non_model_output
+
+  uncacheable_non_model_input:
+    action: uncacheable_input
+    a:
+      link: uncacheable_non_model_output
+
 default_output: first_sum.result

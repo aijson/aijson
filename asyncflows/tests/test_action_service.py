@@ -851,6 +851,90 @@ async def test_uncacheable_input_action(log, in_memory_action_service, log_histo
     assert_logs(log_history, second_action_id, second_action_name)
 
 
+async def test_non_model_add_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "int_add"
+
+    result = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert result == 3
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_non_model_add_dependent_action(
+    log, in_memory_action_service, log_history
+):
+    first_action_id = first_action_name = second_action_name = "int_add"
+    second_action_id = "int_add_2"
+
+    result = await in_memory_action_service.run_action(
+        log=log, action_id=second_action_id
+    )
+    assert result == 4
+
+    assert_logs(log_history, first_action_id, first_action_name, assert_empty=False)
+    assert_logs(log_history, second_action_id, second_action_name)
+
+
+async def test_non_model_add_dependent_cache_action(
+    log, in_memory_action_service, log_history
+):
+    first_action_id = first_action_name = second_action_name = "int_add"
+    second_action_id = "int_add_2"
+
+    result = await in_memory_action_service.run_action(
+        log=log, action_id=first_action_id
+    )
+    assert result == 3
+
+    assert_logs(log_history, first_action_id, first_action_name)
+
+    result_2 = await in_memory_action_service.run_action(
+        log=log, action_id=second_action_id
+    )
+    assert result_2 == 4
+
+    assert_logs(
+        log_history,
+        first_action_id,
+        first_action_name,
+        cache_hit=True,
+        assert_empty=False,
+    )
+    assert_logs(log_history, second_action_id, second_action_name)
+
+
+async def test_uncacheable_non_model_action(log, in_memory_action_service, log_history):
+    from .resources.actions import Dummy
+
+    action_id = action_name = "uncacheable_non_model_output"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+
+    assert isinstance(outputs, Dummy)
+    assert outputs.a == 1
+
+    assert_logs(log_history, action_id, action_name, uncacheable_warning=True)
+
+
+async def test_dependent_uncacheable_non_model_action(
+    log, in_memory_action_service, log_history
+):
+    first_action_id = first_action_name = "uncacheable_non_model_output"
+    second_action_id = "uncacheable_non_model_input"
+    second_action_name = "uncacheable_input"
+
+    await in_memory_action_service.run_action(log=log, action_id=second_action_id)
+
+    assert_logs(
+        log_history,
+        first_action_id,
+        first_action_name,
+        uncacheable_warning=True,
+        assert_empty=False,
+    )
+    assert_logs(log_history, second_action_id, second_action_name)
+
+
 # TODO test that `new_listeners` are all delivered the latest output when starting to listen while action is caching
 # TODO test exception throwing through dependencies
 # TODO test multiple interleaving streaming actions

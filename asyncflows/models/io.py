@@ -25,7 +25,7 @@ def PrivateAttr(*args, **kwargs):
 
 # TODO ensure that inputs don't contain `id` or `action` as fields
 Inputs = TypeVar("Inputs", bound=Union[BaseModel, type(None)])
-Outputs = TypeVar("Outputs", bound=Union[BaseModel, type(None)])
+Outputs = TypeVar("Outputs")
 
 
 class RedisUrlInputs(BaseModel):

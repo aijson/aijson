@@ -276,3 +276,17 @@ class UncacheableInputAction(Action[UncacheableIO, None]):
 
     async def run(self, inputs: UncacheableIO) -> None:
         assert inputs.a.a == 1
+
+
+class IntAdd(Action[AddInputs, int]):
+    name = "int_add"
+
+    async def run(self, inputs: AddInputs) -> int:
+        return inputs.a + inputs.b
+
+
+class NonModelUncacheableAction(Action[None, Dummy]):
+    name = "uncacheable_non_model_output"
+
+    async def run(self, inputs: None) -> Dummy:
+        return Dummy(a=1)

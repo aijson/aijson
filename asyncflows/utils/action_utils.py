@@ -101,6 +101,7 @@ def _get_recursive_subfields(
     name_prefix: str = "",
 ) -> list[type[str]]:
     out = []
+    # TODO make it so that non-pydantic output models properly create the link hint
     # if isinstance(obj, dict):
     #     for name, field in obj.items():
     #         # out.append(name)
@@ -136,7 +137,7 @@ def _build_annotated_field(
     name: str,
     alias_name: str | None = None,
     name_prefix: str = "",
-):
+) -> type[str]:
     if alias_name is None:
         alias_name = name
     description = build_field_description(
@@ -162,7 +163,8 @@ def _build_annotated_field(
             },
         ),
     ]
-    return annotated_field
+    # TODO figure out a typehint for this, why does type[str] not work?
+    return annotated_field  # type: ignore
 
 
 def build_action_title(
@@ -223,11 +225,15 @@ def build_action_description(
         # add outputs description
         outputs_description_items = []
         outputs_type = action._get_outputs_type(action_invocation)
-        if not issubclass(outputs_type, type(None)):
+        if is_basemodel_subtype(outputs_type):
             for field_name, field_info in outputs_type.model_fields.items():
                 outputs_description_items.append(
                     f"- {build_field_description(field_name, field_info, markdown=markdown, include_paths=include_paths)}"
                 )
+        elif not issubclass(outputs_type, type(None)):
+            outputs_description_items.append(
+                f"- {build_field_description(None, FieldInfo(annotation=outputs_type), markdown=markdown, include_paths=include_paths)}"
+            )
         if outputs_description_items:
             if markdown:
                 title = "**Outputs**"
@@ -279,28 +285,41 @@ def build_link_literal(
             include_paths=include_paths,
             title_suffix=" Output",
         )
-        if issubclass(outputs_type, DefaultOutputOutputs):
-            output_attr = outputs_type._default_output
-            field = outputs_type.model_fields[output_attr]
-            annotated_field = _build_annotated_field(
-                base_description=base_description,
-                base_markdown_description=base_markdown_description,
-                field=field,
-                include_paths=include_paths,
-                name=output_attr,
-                alias_name=action_id,
-            )
-            union_elements.append(annotated_field)
 
-        possible_links = _get_recursive_subfields(
-            outputs_type,
-            base_description,
-            base_markdown_description,
-            include_paths=include_paths,
-            name_prefix=f"{action_id}.",
-        )
-        if possible_links:
-            union_elements.extend(possible_links)
+        if is_basemodel_subtype(outputs_type):
+            if issubclass(outputs_type, DefaultOutputOutputs):
+                output_attr = outputs_type._default_output
+                field = outputs_type.model_fields[output_attr]
+                annotated_field = _build_annotated_field(
+                    base_description=base_description,
+                    base_markdown_description=base_markdown_description,
+                    field=field,
+                    include_paths=include_paths,
+                    name=output_attr,
+                    alias_name=action_id,
+                )
+                union_elements.append(annotated_field)
+            union_elements.extend(
+                _get_recursive_subfields(
+                    outputs_type,
+                    base_description,
+                    base_markdown_description,
+                    include_paths=include_paths,
+                    name_prefix=f"{action_id}.",
+                )
+            )
+        else:
+            union_elements.append(
+                _build_annotated_field(
+                    base_description=base_description,
+                    base_markdown_description=base_markdown_description,
+                    field=FieldInfo(
+                        annotation=outputs_type,
+                    ),
+                    include_paths=include_paths,
+                    name=action_id,
+                )
+            )
 
     if union_elements:
         return Union[tuple(union_elements)]  # type: ignore

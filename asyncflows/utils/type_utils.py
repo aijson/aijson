@@ -274,7 +274,11 @@ def remove_optional(type_: type | None) -> tuple[type, bool]:
 
 
 def build_field_description(
-    field_name: str, field_info: FieldInfo, *, markdown: bool, include_paths: bool
+    field_name: str | None,
+    field_info: FieldInfo,
+    *,
+    markdown: bool,
+    include_paths: bool,
 ) -> str:
     type_, is_optional = remove_optional(field_info.annotation)
     qualified_name = build_type_qualified_name(
@@ -284,7 +288,10 @@ def build_field_description(
     if field_info.alias:
         field_name = field_info.alias
 
-    field_desc = f"`{field_name}`: {qualified_name}"
+    if field_name is not None:
+        field_desc = f"`{field_name}`: {qualified_name}"
+    else:
+        field_desc = qualified_name
     if is_optional:
         field_desc += " (optional)"
 
