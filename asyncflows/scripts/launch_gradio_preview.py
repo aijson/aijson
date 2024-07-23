@@ -201,7 +201,8 @@ def _construct_serve_openai_controls(
         variable_values = {
             name: val for name, val in zip(variable_textboxes, variable_values)
         }
-        del variable_values[input_msg_var]
+        if input_msg_var is not None:
+            del variable_values[input_msg_var]
 
         flow_with_vars = flow.set_vars(**variable_values)
 
@@ -238,8 +239,8 @@ def _construct_serve_openai_controls(
     )
 
     input_msg_dropdown = gr.Dropdown(
-        choices=list(variable_textboxes),
-        value=list(variable_textboxes)[0],
+        choices=[None] + list(variable_textboxes),  # type: ignore
+        value=list(variable_textboxes)[0] if variable_textboxes else None,
         label="Message Input",
     )
     target_output_dropdown = gr.Dropdown(
