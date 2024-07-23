@@ -8,6 +8,7 @@ from asyncflows.models.io import (
     FinalInvocationInputs,
     CacheControlOutputs,
 )
+from asyncflows.models.func import register_action
 
 __all__ = [
     "AsyncFlows",
@@ -23,6 +24,7 @@ __all__ = [
     "BlobRepoInputs",
     "FinalInvocationInputs",
     "CacheControlOutputs",
+    "register_action",
 ]
 
 from asyncflows.repos.cache_repo import ShelveCacheRepo, RedisCacheRepo

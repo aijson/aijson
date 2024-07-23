@@ -1,5 +1,6 @@
 import inspect
 import typing
+
 import structlog
 from typing import ClassVar, Type, Any, Optional, TypeVar, Generic, AsyncIterator
 
@@ -67,7 +68,8 @@ class InternalActionBase(Generic[Inputs, Outputs], metaclass=ActionMeta):
     # `finished` is a reserved name (FIXME is it still?).
     name: ClassVar[str]
 
-    #: The name of the action, used to describe it to the LLM upon action selection. Optional, defaults to `id`.
+    #: The name of the action, used to describe it to the LLM upon action selection.
+    #  Optional, defaults to the value of `name`.
     readable_name: ClassVar[Optional[str]] = None
 
     #: The description of the action, used to describe it to the LLM upon action selection. Optional.

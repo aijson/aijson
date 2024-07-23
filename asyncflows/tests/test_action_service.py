@@ -935,6 +935,79 @@ async def test_dependent_uncacheable_non_model_action(
     assert_logs(log_history, second_action_id, second_action_name)
 
 
+async def test_bare_func_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "bare_func"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert outputs == 1
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_custom_func_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "custom_func"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert outputs == 1
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_bare_adder_func_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "bare_adder_func"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert outputs == 3
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_annotated_adder_func_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "annotated_adder_func"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert outputs == 3
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_default_adder_func_action(log, in_memory_action_service, log_history):
+    action_id = action_name = "default_adder_func"
+
+    outputs = await in_memory_action_service.run_action(log=log, action_id=action_id)
+    assert outputs == 3
+
+    assert_logs(log_history, action_id, action_name)
+
+
+async def test_bare_async_generator_func(log, in_memory_action_service, log_history):
+    action_id = action_name = "bare_adder_generator_func"
+
+    values = list(range(3))
+    i = 0
+    async for outputs in in_memory_action_service.stream_action(
+        log=log, action_id=action_id
+    ):
+        assert outputs == values[i]
+        i += 1
+
+    assert_logs(log_history, action_id, action_name, partial_yields=3)
+
+
+async def test_async_generator_func(log, in_memory_action_service, log_history):
+    action_id = action_name = "adder_generator_func"
+
+    values = list(range(3))
+    i = 0
+    async for outputs in in_memory_action_service.stream_action(
+        log=log, action_id=action_id
+    ):
+        assert outputs == values[i]
+        i += 1
+
+    assert_logs(log_history, action_id, action_name, partial_yields=3)
+
+
 # TODO test that `new_listeners` are all delivered the latest output when starting to listen while action is caching
 # TODO test exception throwing through dependencies
 # TODO test multiple interleaving streaming actions

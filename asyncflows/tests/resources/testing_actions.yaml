@@ -259,4 +259,34 @@ flow:
     a:
       link: uncacheable_non_model_output
 
+  bare_func:
+    action: bare_func
+
+  custom_func:
+    action: custom_func
+
+  bare_adder_func:
+    action: bare_adder_func
+    a: 1
+    b: 2
+
+  annotated_adder_func:
+    action: annotated_adder_func
+    a: 1
+    b: 2
+
+  default_adder_func:
+    action: default_adder_func
+    a: 1
+
+  bare_adder_generator_func:
+    action: bare_adder_generator_func
+    a: 1
+    b: 2
+
+  adder_generator_func:
+    action: adder_generator_func
+    a: 1
+    b: 2
+
 default_output: first_sum.result

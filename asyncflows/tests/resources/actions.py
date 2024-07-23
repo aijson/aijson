@@ -5,6 +5,9 @@ from asyncflows.models.config.action import (
     Action,
     StreamingAction,
 )
+from asyncflows.models.func import (
+    register_action,
+)
 from asyncflows.models.io import (
     FinalInvocationInputs,
     BlobRepoInputs,
@@ -290,3 +293,42 @@ class NonModelUncacheableAction(Action[None, Dummy]):
 
     async def run(self, inputs: None) -> Dummy:
         return Dummy(a=1)
+
+
+@register_action
+def bare_func():
+    return 1
+
+
+@register_action(
+    name="custom_func",
+)
+def custom_info_func():
+    return 1
+
+
+@register_action
+async def bare_adder_func(a, b):
+    return a + b
+
+
+@register_action()
+def annotated_adder_func(a: int, b: int) -> int:
+    return a + b
+
+
+@register_action
+async def default_adder_func(a: int, b: int = 2) -> int:
+    return a + b
+
+
+@register_action
+async def bare_adder_generator_func(a, b):
+    for i in range(a + b):
+        yield i
+
+
+@register_action
+async def adder_generator_func(a: int, b: int) -> AsyncIterator[int]:
+    for i in range(a + b):
+        yield i
