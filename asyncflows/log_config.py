@@ -93,8 +93,15 @@ def configure_logging(pretty=True, additional_processors=None, level=None):
         processors += [
             structlog.dev.set_exc_info,  # add exception info
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-            structlog.dev.ConsoleRenderer(colors=True),
         ]
+        if os.environ.get("SUPPRESS_LOG_COLORS"):
+            processors += [
+                structlog.dev.ConsoleRenderer(colors=False),
+            ]
+        else:
+            processors += [
+                structlog.dev.ConsoleRenderer(),
+            ]
     else:
         processors += [
             structlog.processors.format_exc_info,  # add exception info
