@@ -140,7 +140,7 @@ if __name__ == "__main__":
         )
 
         # TODO assert tests not imported before this line
-        import asyncflows.tests.resources.actions  # noqa
+        import asyncflows.tests.resources.testing_actions  # noqa
 
         testing_action_names = list(
             get_actions_dict(

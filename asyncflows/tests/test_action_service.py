@@ -3,8 +3,8 @@ import os
 from unittest import mock
 from unittest.mock import ANY
 
-import asyncflows.tests.resources.actions  # noqa: F401
-from asyncflows.tests.resources.actions import AddOutputs
+import asyncflows.tests.resources.testing_actions  # noqa: F401
+from asyncflows.tests.resources.testing_actions import AddOutputs
 from asyncflows.actions.utils.prompt_context import (
     RoleElement,
     TextElement,
@@ -820,7 +820,7 @@ async def test_loop_with_internal_dependencies(
 
 
 async def test_uncacheable_output_action(log, in_memory_action_service, log_history):
-    from .resources.actions import Dummy
+    from .resources.testing_actions import Dummy
 
     action_id = action_name = "uncacheable"
 
@@ -904,7 +904,7 @@ async def test_non_model_add_dependent_cache_action(
 
 
 async def test_uncacheable_non_model_action(log, in_memory_action_service, log_history):
-    from .resources.actions import Dummy
+    from .resources.testing_actions import Dummy
 
     action_id = action_name = "uncacheable_non_model_output"
 
