@@ -292,7 +292,12 @@ def build_field_description(
         field_desc = f"`{field_name}`: {qualified_name}"
     else:
         field_desc = qualified_name
-    if is_optional:
+    if field_info.default not in (
+        None,
+        PydanticUndefined,
+    ):
+        field_desc += f" (default: {repr(field_info.default)})"
+    elif is_optional:
         field_desc += " (optional)"
 
     if field_info.description:
