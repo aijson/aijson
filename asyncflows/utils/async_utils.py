@@ -1,7 +1,7 @@
 import asyncio
 import time
-from asyncio import CancelledError, Task
-from typing import TypeVar, AsyncIterator, Awaitable, Sequence, AsyncGenerator
+from asyncio import CancelledError
+from typing import TypeVar, AsyncIterator, Awaitable, Sequence
 
 import sentry_sdk
 import structlog
@@ -131,14 +131,15 @@ async def merge_iterators(
         await asyncio.gather(*workers, return_exceptions=True)
 
 
-async def cancel_generators(agenerators: list[AsyncGenerator]):
-    tasks = []
-    for coro in agenerators:
-        task = Task(coro.__anext__())
-        tasks.append(task)
-        task.cancel()
-
-    await asyncio.gather(*tasks, return_exceptions=True)
+# incompatible with python3.12, and not used anywhere at the moment
+# async def cancel_generators(agenerators: list[AsyncGenerator]):
+#     tasks = []
+#     for coro in agenerators:
+#         task = Task(coro.__anext__())
+#         tasks.append(task)
+#         task.cancel()
+#
+#     await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def iterator_to_coro(async_iterator: AsyncIterator[T | None]) -> T | None:
