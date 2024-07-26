@@ -1,5 +1,6 @@
 # import before importing action stuff so it gets registered via metaclass
 import os
+import sys
 from unittest import mock
 
 import asyncflows.tests.resources.testing_actions  # noqa: F401
@@ -716,14 +717,36 @@ async def test_lambda_adder(log, in_memory_action_service, log_history):
     assert outputs.result == 11
 
     assert_logs(log_history, first_dependency_id, action_name, assert_empty=False)
-    assert_logs(
-        log_history,
-        first_dependency_id,
-        action_name,
-        assert_empty=False,
-        cache_hit=True,
-    )
-    assert_logs(log_history, second_dependency_id, action_name, assert_empty=False)
+
+    # with eager task factory (python>=3.12) these two assertions happen in non-deterministic order
+    # TODO should we also assert `upstream_action_id` in logs like this, to make it clearer what's going on?
+    # TODO replace this with an unordered log assertion implementation
+    #  think of it as multiple streams that can be satisfied
+    log_assertions = [
+        lambda _logs: assert_logs(
+            _logs,
+            first_dependency_id,
+            action_name,
+            assert_empty=False,
+            cache_hit=True,
+        ),
+        lambda _logs: assert_logs(
+            _logs, second_dependency_id, action_name, assert_empty=False
+        ),
+    ]
+    try:
+        log_copy = log_history[:]
+        for assertion in log_assertions:
+            assertion(log_copy)
+        log_history = log_copy
+    except Exception:
+        assert sys.version_info.minor >= 12
+        log_assertions = log_assertions[::-1]
+        log_copy = log_history[:]
+        for assertion in log_assertions:
+            assertion(log_copy)
+        log_history = log_copy
+
     assert_logs(log_history, action_id, action_name)
 
 
