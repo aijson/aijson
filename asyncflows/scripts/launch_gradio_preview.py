@@ -35,6 +35,7 @@ from asyncflows.utils.static_utils import (
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 
+from gradio.components import Component  # noqa: E402
 from gradio.utils import SourceFileReloader, _remove_no_reload_codeblocks  # noqa: E402
 import gradio as gr  # noqa: E402
 
@@ -254,6 +255,37 @@ def _construct_serve_openai_controls(
     # TODO export config button, once subflows are in
 
 
+def _build_output_component(
+    action_output_components: dict[str, Component],
+    run_buttons: dict[str, gr.Button],
+    annotation: type | None,
+    full_output_name: str,
+):
+    with gr.Row():
+        if annotation is not None and issubclass(annotation, str):
+            component = gr.Markdown(
+                show_label=False,
+                key=full_output_name,
+                line_breaks=True,
+            )
+        else:
+            component = gr.JSON(
+                show_label=False,
+                key=full_output_name,
+            )
+        action_output_components[full_output_name] = component
+        with gr.Column(elem_classes=["my-compact-column"]):
+            run_button = gr.Button(
+                "▶️",
+                # elem_classes=["my-square-column-button"],
+            )
+            run_buttons[full_output_name] = run_button
+            # serve = gr.Button(
+            #     "⬆️",
+            #     # elem_classes=["my-square-column-button"],
+            # )
+
+
 def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
     actions_dict = get_actions_dict()
     dependency_map = get_link_dependency_map(flow.action_config)
@@ -317,35 +349,32 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     ActionStatus.READY.value,
                 ],
             ) as action_accordion:
-                with gr.Tabs():
-                    for output_name, output_field in outputs_type.model_fields.items():
-                        if output_field.deprecated:
-                            continue
-                        full_output_name = f"{action_id}.{output_name}"
-                        with gr.Tab(output_name):
-                            with gr.Row():
-                                if is_basemodel_subtype(output_field.annotation):
-                                    component = gr.JSON(
-                                        show_label=False,
-                                        key=full_output_name,
-                                    )
-                                else:
-                                    component = gr.Markdown(
-                                        show_label=False,
-                                        key=full_output_name,
-                                        line_breaks=True,
-                                    )
-                                action_output_components[full_output_name] = component
-                                with gr.Column(elem_classes=["my-compact-column"]):
-                                    run_button = gr.Button(
-                                        "▶️",
-                                        # elem_classes=["my-square-column-button"],
-                                    )
-                                    run_buttons[full_output_name] = run_button
-                                    # serve = gr.Button(
-                                    #     "⬆️",
-                                    #     # elem_classes=["my-square-column-button"],
-                                    # )
+                if is_basemodel_subtype(outputs_type):
+                    with gr.Tabs():
+                        for (
+                            output_name,
+                            output_field,
+                        ) in outputs_type.model_fields.items():
+                            if output_field.deprecated:
+                                continue
+                            annotation = output_field.annotation
+                            full_output_name = f"{action_id}.{output_name}"
+
+                            with gr.Tab(output_name):
+                                _build_output_component(
+                                    action_output_components=action_output_components,
+                                    run_buttons=run_buttons,
+                                    annotation=annotation,
+                                    full_output_name=full_output_name,
+                                )
+                else:
+                    # TODO put this in a box somehow? gah why does markdown not support container
+                    _build_output_component(
+                        action_output_components=action_output_components,
+                        run_buttons=run_buttons,
+                        annotation=outputs_type,
+                        full_output_name=action_id,
+                    )
             action_accordions[action_id] = action_accordion
 
         def create_run_func(queued_action_ids: Collection[str]):
