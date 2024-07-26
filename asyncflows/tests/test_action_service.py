@@ -1,7 +1,6 @@
 # import before importing action stuff so it gets registered via metaclass
 import os
 from unittest import mock
-from unittest.mock import ANY
 
 import asyncflows.tests.resources.testing_actions  # noqa: F401
 from asyncflows.tests.resources.testing_actions import AddOutputs
@@ -30,6 +29,7 @@ def assert_logs(
     blobs_cache_checks: int = 0,
     blobs_retrieved: int = 0,
     uncacheable_warning: bool = False,
+    no_output: bool = False,
 ):
     # ignore some logs
     # log_list[:] = [
@@ -156,6 +156,13 @@ def assert_logs(
             assert log_dict["action_id"] == action_id
             assert log_dict["log_level"] == "warning"
 
+        if no_output:
+            log_dict = log_list.pop(0)
+            assert log_dict["event"] == "Action finished without yielding outputs"
+            assert log_dict["action"] == action_name
+            assert log_dict["action_id"] == action_id
+            assert log_dict["log_level"] == "warning"
+
     if assert_empty:
         assert len(log_list) == 0
 
@@ -213,7 +220,7 @@ async def test_action_failure_handling(log, in_memory_action_service, log_histor
         action_id=action_id,
     )
 
-    assert_logs(log_history, action_id, "test_error", exception=True)
+    assert_logs(log_history, action_id, "test_error", exception=True, no_output=True)
 
 
 async def test_cache_and_expired_blob_detection(
@@ -530,15 +537,14 @@ async def test_exception_in_internals(log, in_memory_action_service, log_history
             "action": action_name,
             "action_id": action_id,
             "event": "Action service exception",
-            "traceback": ANY,
+            "exc_info": True,
             "log_level": "error",
         },
         {
             "action": action_name,
             "action_id": action_id,
-            "event": "Action task ended without yielding outputs",
-            "log_level": "error",
-            "partial": False,
+            "event": "Action finished without yielding outputs",
+            "log_level": "warning",
         },
     ]
 
@@ -580,32 +586,30 @@ async def test_exception_in_upstream_action_internals(
             "action_id": upstream_action_id,
             "action": upstream_action_name,
             "event": "Action service exception",
-            "traceback": ANY,
+            "exc_info": True,
             "log_level": "error",
             "downstream_action_id": action_id,
         },
         {
             "action_id": upstream_action_id,
             "action": upstream_action_name,
-            "event": "Action task ended without yielding outputs",
-            "log_level": "error",
-            "partial": False,
+            "event": "Action finished without yielding outputs",
+            "log_level": "warning",
             "downstream_action_id": action_id,
         },
         {
             "action_id": action_id,
             "action": action_name,
-            "event": "Not all action tasks completed",
-            "action_task_ids": [upstream_action_id],
+            "event": "Not all linked actions yielded outputs",
+            "linked_action_ids": [upstream_action_id],
             "missing_action_ids": {upstream_action_id},
             "log_level": "error",
         },
         {
             "action_id": action_id,
             "action": action_name,
-            "event": "Action task ended without yielding outputs",
-            "log_level": "error",
-            "partial": False,
+            "event": "Action finished without yielding outputs",
+            "log_level": "warning",
         },
     ]
 

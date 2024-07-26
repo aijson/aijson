@@ -115,7 +115,7 @@ class ActionService:
         inputs: Inputs | None,
         flow: FlowConfig,
         variables: dict[str, Any],
-    ) -> AsyncIterator[Outputs | None]:
+    ) -> AsyncIterator[Outputs]:
         # Prepare inputs
         if isinstance(inputs, RedisUrlInputs):
             inputs._redis_url = get_redis_url()
@@ -175,11 +175,10 @@ class ActionService:
         except Exception as e:
             log.exception("Action exception")
             sentry_sdk.capture_exception(e)
-            yield None
-        except BaseException as e:
+        except BaseException:
             log.info(
                 "Action canceled",
-                exc_type=type(e).__name__,
+                exc_info=True,
             )
             raise
         finally:
@@ -386,19 +385,22 @@ class ActionService:
                 # propagate error
                 yield Sentinel
                 return
+
             # Compile the inputs
             context = dependency_outputs | variables
-            inputs_dict = await self._collect_inputs_from_context(
-                log,
-                input_spec=input_spec,
-                context=context,
-            )
+            rendered_inputs = {}
             try:
-                yield inputs_type.model_validate(inputs_dict)
-            except Exception as e:
+                rendered_inputs = await self._collect_inputs_from_context(
+                    log,
+                    input_spec=input_spec,
+                    context=context,
+                )
+                yield inputs_type.model_validate(rendered_inputs)
+            except ValidationError as e:
                 log.exception(
                     "Invalid inputs",
-                    inputs_dict=inputs_dict,
+                    context=context,
+                    rendered_inputs=rendered_inputs,
                 )
                 sentry_sdk.capture_exception(e)
 
@@ -470,7 +472,7 @@ class ActionService:
             iterators,
         )
 
-        log = log.bind(action_task_ids=executable_ids)
+        log = log.bind(linked_action_ids=executable_ids)
         dependency_outputs = {}
         async for executable_id, executable_outputs in merged_iterator:
             # None is yielded as action_outputs if an action throws an exception
@@ -493,7 +495,7 @@ class ActionService:
                 )
         if not all(action_id in dependency_outputs for action_id in executable_ids):
             log.error(
-                "Not all action tasks completed",
+                "Not all linked actions yielded outputs",
                 missing_action_ids=set(executable_ids) - set(dependency_outputs.keys()),
             )
             yield Sentinel
@@ -528,11 +530,11 @@ class ActionService:
         action_id: ExecutableId,
         cache_key: str | None,
         flow: FlowConfig,
-    ) -> None | Outputs:
+    ) -> type[Sentinel] | Outputs:
         action_invocation = flow[action_id]
         if not isinstance(action_invocation, ActionInvocation):
             log.error("Not an action", action_id=action_id)
-            return None
+            return Sentinel
         action_name = action_invocation.action
         action_type = self.get_action_type(action_name)
 
@@ -555,7 +557,7 @@ class ActionService:
                         outputs = outputs_type.model_validate_json(outputs_json)
                         if await self._contains_expired_blobs(log, outputs):
                             log.info("Cache hit but blobs expired")
-                            return None
+                            return Sentinel
                         else:
                             log.info("Cache hit")
                     else:
@@ -577,7 +579,7 @@ class ActionService:
                 action_cache_flag=action_type.cache,
             )
 
-        return None
+        return Sentinel
 
     async def _resolve_cache_key(
         self,
@@ -670,16 +672,16 @@ class ActionService:
     ) -> None:
         log.debug("Running action task")
 
-        action_config = flow[action_id]
-        if not isinstance(action_config, ActionInvocation):
+        action_invocation = flow[action_id]
+        if not isinstance(action_invocation, ActionInvocation):
             log.error("Not an action", task_id=task_id)
             return
-        action_name = action_config.action
+        action_name = action_invocation.action
         action_type = self.get_action_type(action_name)
 
         # Check cache by `cache_key` if provided
         cache_key = await self._resolve_cache_key(
-            log, action_config, variables, flow, task_prefix
+            log, action_invocation, variables, flow, task_prefix
         )
         if is_sentinel(cache_key):
             log.error("Failed to create cache key")
@@ -688,14 +690,14 @@ class ActionService:
         if cache_key is not None:
             hardcoded_cache_key = cache_key
             outputs = await self._check_cache(log, action_id, cache_key, flow=flow)
-            if outputs is not None:
+            if not is_sentinel(outputs):
                 self._broadcast_outputs(log, task_id, outputs)
                 return
         else:
             hardcoded_cache_key = cache_key
 
         inputs = None
-        outputs = None
+        outputs = Sentinel
         cache_hit = False
 
         # Run dependencies
@@ -707,14 +709,14 @@ class ActionService:
         #  in different levels of scope
         async for inputs in self.stream_input_dependencies(
             log,
-            action_config,
+            action_invocation,
             variables,
             flow,
             task_prefix=task_prefix,
         ):
             if is_sentinel(inputs):
                 # propagate error
-                return None
+                return
             cache_hit = False
 
             # Check cache
@@ -731,7 +733,7 @@ class ActionService:
             else:
                 cache_key = None
             outputs = await self._check_cache(log, action_id, cache_key, flow=flow)
-            if outputs is not None:
+            if not is_sentinel(outputs):
                 cache_hit = True
                 self._broadcast_outputs(log, task_id, outputs)
                 continue
@@ -772,14 +774,17 @@ class ActionService:
                 self._broadcast_outputs(log, task_id, outputs)
 
         # Cache result
-        # TODO should we cache intermediate results too, or only on the final set of inputs/outputs?
-        # TODO we shouldn't cache if all we did was pull from cache
+        # TODO should we cache intermediate results too, or only on the final set of inputs/outputs? (currently latter)
         if (
-            self.use_cache
-            and outputs is not None
-            and not cache_hit
-            and action_type.cache
-            and (not isinstance(outputs, CacheControlOutputs) or outputs._cache)
+            self.use_cache  # global flag
+            and action_type._get_outputs_type(action_invocation)
+            is not type(None)  # outputs type is NoneType
+            and not is_sentinel(outputs)  # outputs not yielded
+            and not cache_hit  # output retrieved from cache
+            and action_type.cache  # cache disabled in action implementation
+            and (
+                not isinstance(outputs, CacheControlOutputs) or outputs._cache
+            )  # outputs modifier opt-out of caching
         ):
             await self._cache_outputs(
                 log,
@@ -789,7 +794,7 @@ class ActionService:
                 action_type=action_type,
             )
 
-        if queues := self.new_listeners[task_id]:
+        if not is_sentinel(outputs) and (queues := self.new_listeners[task_id]):
             log.debug("Final output broadcast for new listeners")
             self._broadcast_outputs(log, task_id, outputs, queues=queues)
 
@@ -979,6 +984,7 @@ class ActionService:
         log = log.bind(action_id=action_id, action=action_name)
 
         task_id = f"{task_prefix}{action_id}"
+        outputs = Sentinel
 
         # TODO rewrite this try/finally into a `with` scope that cleans up
         try:
@@ -1010,7 +1016,6 @@ class ActionService:
                 )
 
             # Yield outputs from queue
-            outputs = Sentinel
             while True:
                 try:
                     new_outputs = await asyncio.wait_for(
@@ -1026,11 +1031,6 @@ class ActionService:
                     log.debug(
                         "Action task stream signaled end",
                     )
-                    if is_sentinel(outputs):
-                        log.error(
-                            "Action task ended without yielding outputs",
-                            partial=partial,
-                        )
                     break
                 outputs = new_outputs
                 if partial:
@@ -1046,6 +1046,10 @@ class ActionService:
             if queue is not None:
                 self.action_output_broadcast[task_id].remove(queue)
             if action_task is not None:
+                if is_sentinel(outputs):
+                    log.warning(
+                        "Action finished without yielding outputs",
+                    )
                 try:
                     # give task 3 seconds to finish
                     await asyncio.wait_for(action_task, timeout=3)
