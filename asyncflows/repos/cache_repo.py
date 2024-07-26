@@ -75,8 +75,8 @@ class CacheRepo:
 
 class ShelveCacheRepo(CacheRepo):
     def _get_shelf_path(self, namespace: str) -> str:
+        os.makedirs(self.temp_dir, exist_ok=True)
         path = os.path.join(self.temp_dir, f"{namespace}.db")
-        os.makedirs(path, exist_ok=True)
         return path
 
     def _load_shelf(self, namespace: str) -> shelve.Shelf:
