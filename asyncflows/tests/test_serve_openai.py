@@ -1,10 +1,12 @@
 import asyncio
 from unittest.mock import ANY
 
+import openai
 import pytest
 
 from asyncflows import AsyncFlows
 from asyncflows.scripts.serve_openai import run_server, find_open_port
+from asyncflows.utils.static_utils import get_target_outputs
 
 
 @pytest.fixture
@@ -13,30 +15,66 @@ async def open_port():
 
 
 @pytest.fixture
-async def serve(testing_actions, open_port):
-    flow = AsyncFlows(testing_actions)
-    task = asyncio.create_task(
-        run_server(flow, port=open_port, target_output="first_sum.result")
-    )
+def flow(testing_actions):
+    return AsyncFlows(testing_actions)
+
+
+@pytest.fixture(autouse=True)
+async def serve(open_port, flow):
+    task = asyncio.create_task(run_server(flow, port=open_port))
     yield
     task.cancel()
 
 
-async def test_run(serve, open_port):
+@pytest.fixture
+async def client(open_port) -> openai.AsyncClient:
     import openai
 
-    ai = openai.AsyncOpenAI(base_url=f"http://localhost:{open_port}", api_key="123")
+    return openai.AsyncOpenAI(base_url=f"http://localhost:{open_port}", api_key="123")
+    # return openai.AsyncOpenAI()
 
-    response = await ai.chat.completions.create(
+
+async def test_run(client):
+    response = await client.chat.completions.create(
         messages=[{"role": "user", "content": "stuff about something"}],
-        model="gpt-4o",
+        model="second_sum.result",
     )
 
     assert response.model_dump() == {
         "id": "0",
         "object": "chat.completion",
         "created": ANY,
-        "model": "gpt-4o",
+        "model": "second_sum.result",
+        "choices": [
+            {
+                "finish_reason": None,
+                "index": None,
+                "logprobs": None,
+                "message": {
+                    "role": "assistant",
+                    "content": "7",
+                    "tool_calls": None,
+                    "function_call": None,
+                },
+            },
+        ],
+        "service_tier": None,
+        "system_fingerprint": None,
+        "usage": None,
+    }
+
+
+async def test_run_model_none(client):
+    response = await client.chat.completions.create(
+        messages=[{"role": "user", "content": "stuff about something"}],
+        model=None,  # type: ignore
+    )
+
+    assert response.model_dump() == {
+        "id": "0",
+        "object": "chat.completion",
+        "created": ANY,
+        "model": "first_sum.result",
         "choices": [
             {
                 "finish_reason": None,
@@ -56,13 +94,11 @@ async def test_run(serve, open_port):
     }
 
 
-async def test_stream(serve, open_port):
-    import openai
-
-    ai = openai.AsyncOpenAI(base_url=f"http://localhost:{open_port}", api_key="123")
-    response = await ai.chat.completions.create(
+async def test_stream(client):
+    # TODO test against a streaming action
+    response = await client.chat.completions.create(
         messages=[{"role": "user", "content": "stuff about something"}],
-        model="gpt-4o",
+        model="first_sum.result",
         stream=True,
     )
 
@@ -73,7 +109,7 @@ async def test_stream(serve, open_port):
             "id": "0",
             "object": "chat.completion.chunk",
             "created": ANY,
-            "model": "gpt-4o",
+            "model": "first_sum.result",
             "choices": [
                 {
                     "delta": {
@@ -92,3 +128,14 @@ async def test_stream(serve, open_port):
             "usage": None,
         }
     assert result_came_through
+
+
+async def test_models(client, flow):
+    response = await client.models.list()
+    legal_target_outputs = get_target_outputs(flow.action_config)
+    assert legal_target_outputs == [m.id for m in response.data]
+
+
+async def test_model(client):
+    response = await client.models.retrieve("first_sum.result")
+    assert response.id == "first_sum.result"

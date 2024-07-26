@@ -3,6 +3,8 @@ from typing_extensions import Any, assert_never
 import structlog
 
 from asyncflows.models.config.action import ActionInvocation
+from asyncflows.utils.action_utils import get_actions_dict
+from asyncflows.utils.pydantic_utils import is_basemodel_subtype
 from asyncflows.utils.rendering_utils import extract_root_var
 from asyncflows.models.config.flow import (
     ActionConfig,
@@ -244,3 +246,24 @@ def get_link_dependency_map(
         invocation_id: {d for d in dependencies if d in config.flow}
         for invocation_id, dependencies in dependency_map.items()
     }
+
+
+def get_target_outputs(config: ActionConfig):
+    actions_dict = get_actions_dict()
+
+    legal_target_outputs = []
+    for action_id, action_invocation in config.flow.items():
+        # TODO handle loop
+        if isinstance(action_invocation, Loop):
+            continue
+        legal_target_outputs.append(action_id)
+        action = actions_dict[action_invocation.action]
+        outputs_type = action._get_outputs_type(action_invocation)
+        if not is_basemodel_subtype(outputs_type):
+            continue
+        for output_name, output_field in outputs_type.model_fields.items():
+            if output_field.deprecated:
+                continue
+            full_output_name = f"{action_id}.{output_name}"
+            legal_target_outputs.append(full_output_name)
+    return legal_target_outputs

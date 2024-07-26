@@ -191,10 +191,9 @@ def _construct_env_var_controls(
 def _construct_serve_openai_controls(
     log,
     flow: AsyncFlows,
-    target_outputs: list[str],
     variable_textboxes: dict[str, gr.Textbox],
 ):
-    async def serve(input_msg_var, target_output, *variable_values):
+    async def serve(input_msg_var, *variable_values):
         global _serve_openai_task
         global _openai_server
 
@@ -222,7 +221,6 @@ def _construct_serve_openai_controls(
         _openai_server = await create_server(
             flow_with_vars,
             input_var_name=input_msg_var,
-            target_output=target_output,
             host=host,
             port=port,
         )
@@ -235,7 +233,7 @@ def _construct_serve_openai_controls(
         "Serve an OpenAI-compatible Chat API:\n"
         "- using the variable values specified below\n"
         "- replacing the `Message Input` variable's value with the last message of the prompt\n"
-        "- returning as a completion the `Target Output`"
+        "- making outputs of the flow available as different models in the API"
     )
 
     input_msg_dropdown = gr.Dropdown(
@@ -243,18 +241,12 @@ def _construct_serve_openai_controls(
         value=list(variable_textboxes)[0] if variable_textboxes else None,
         label="Message Input",
     )
-    target_output_dropdown = gr.Dropdown(
-        choices=target_outputs,  # type: ignore  # gradio should be using Sequence here
-        value=flow.action_config.get_default_output(),
-        label="Target Output",
-    )
     serve_button = gr.Button("Serve")
     status_box = gr.Textbox(label="Status", interactive=False)
     serve_button.click(
         serve,
         inputs=[
             input_msg_dropdown,
-            target_output_dropdown,
             *variable_textboxes.values(),
         ],
         outputs=status_box,
@@ -282,21 +274,6 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
             for variable_name in variables
         }
 
-        # build list of target outputs
-        legal_target_outputs = []
-        for action_id, action_invocation in flow.action_config.flow.items():
-            # TODO handle loop
-            if isinstance(action_invocation, Loop):
-                continue
-            legal_target_outputs.append(action_id)
-            action = actions_dict[action_invocation.action]
-            outputs_type = action._get_outputs_type(action_invocation)
-            for output_name, output_field in outputs_type.model_fields.items():
-                if output_field.deprecated:
-                    continue
-                full_output_name = f"{action_id}.{output_name}"
-                legal_target_outputs.append(full_output_name)
-
         # build options
         with gr.Accordion("Options", open=False):
             with gr.Tabs():
@@ -313,7 +290,6 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     _construct_serve_openai_controls(
                         log,
                         flow=flow,
-                        target_outputs=legal_target_outputs,
                         variable_textboxes=variable_textboxes,
                     )
 
