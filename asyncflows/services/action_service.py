@@ -175,10 +175,10 @@ class ActionService:
         except Exception as e:
             log.exception("Action exception")
             sentry_sdk.capture_exception(e)
-        except BaseException:
+        except BaseException as e:
             log.info(
                 "Action canceled",
-                exc_info=True,
+                exc_type=type(e),
             )
             raise
         finally:
