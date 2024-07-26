@@ -1,6 +1,8 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, AsyncIterator
+
+import jinja2
 
 from asyncflows.models.config.flow import ActionConfig
 from asyncflows.services.action_service import ActionService
@@ -103,7 +105,7 @@ class AsyncFlows:
             _vars=variables,
         )
 
-    async def run(self, target_output: None | str = None):
+    async def run(self, target_output: None | str = None) -> Any:
         """
         Run the subset of the flow required to get the target output.
         If the action has already been run, the cached output will be returned.
@@ -143,9 +145,12 @@ class AsyncFlows:
             executable_id: outputs,
         }
 
-        return await declaration.render(context)
+        result = await declaration.render(context)
+        if isinstance(result, jinja2.Undefined):
+            raise RuntimeError("Failed to render result")
+        return result
 
-    async def stream(self, target_output: None | str = None):
+    async def stream(self, target_output: None | str = None) -> AsyncIterator[Any]:
         """
         Run the subset of the flow required to get the target output, and asynchronously iterate the output.
         If the action has already been run, the cached output will be returned.
@@ -184,4 +189,7 @@ class AsyncFlows:
                 executable_id: outputs,
             }
 
-            yield await declaration.render(context)
+            result = await declaration.render(context)
+            if isinstance(result, jinja2.Undefined):
+                raise RuntimeError("Failed to render result")
+            yield result
