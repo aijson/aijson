@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 import uuid
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -54,6 +55,12 @@ def configure_logs():
     configure_logging(
         pretty=True, level=logging.DEBUG, additional_processors=[capture_processor]
     )
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def set_eager_task_factory(event_loop):
+    if sys.version_info.minor >= 12:
+        event_loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
 
 
 @pytest.fixture(scope="function")

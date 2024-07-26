@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 from collections import defaultdict
 from json import JSONDecodeError
 from typing import Any, AsyncIterator, Iterable
@@ -65,12 +66,17 @@ class ActionService:
         cache_repo: CacheRepo,
         blob_repo: BlobRepo,
         config: ActionConfig,
+        loop: asyncio.AbstractEventLoop | None = None,
     ):
         self.temp_dir = temp_dir
         self.use_cache = use_cache
         self.cache_repo = cache_repo
         self.blob_repo = blob_repo
         self.config = config
+
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        if sys.version_info.minor >= 12:
+            self.loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
 
         self.tasks: dict[str, asyncio.Task] = {}
         self.action_output_broadcast: dict[str, list[asyncio.Queue]] = defaultdict(list)
@@ -825,7 +831,8 @@ class ActionService:
             self._broadcast_outputs(log, task_id, Sentinel)
 
             # Signal that the task is done
-            del self.tasks[task_id]
+            if task_id in self.tasks:
+                del self.tasks[task_id]
 
     async def stream_loop(
         self,
@@ -998,7 +1005,7 @@ class ActionService:
                 log.debug(
                     "Scheduling action task",
                 )
-                action_task = asyncio.create_task(
+                action_task = self.loop.create_task(
                     self._run_and_broadcast_action_task(
                         log=log,
                         action_id=action_id,
@@ -1008,8 +1015,8 @@ class ActionService:
                         task_prefix=task_prefix,
                     )
                 )
-
-                self.tasks[task_id] = action_task
+                if not action_task.done():
+                    self.tasks[task_id] = action_task
             else:
                 log.debug(
                     "Listening to existing action task",
