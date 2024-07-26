@@ -76,6 +76,7 @@ jobs:
           BUCKET_NAME: "mimi-blobs"
           AWS_SECRET_ACCESS_KEY: ""
           AWS_ENDPOINT_URL: http://localhost:8333
+          SUPPRESS_LOG_COLORS: "1"
 
   pyright:
     strategy:
