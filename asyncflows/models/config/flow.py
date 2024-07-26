@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Literal
 
 from pydantic import Field
 
@@ -54,6 +54,7 @@ ModelConfigDeclaration = build_model_config()
 
 
 class ActionConfig(StrictModel):
+    version: Literal["0.1"]  # TODO implement migrations
     default_model: ModelConfigDeclaration = ModelConfig()  # type: ignore
     action_timeout: float = 360
     flow: "FlowConfig"
