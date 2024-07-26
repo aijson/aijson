@@ -34,7 +34,7 @@ def build_input_fields(
     action_invocation: ActionInvocation | None = None,
 ) -> dict[str, tuple[type, Any]]:
     inputs_type = action._get_inputs_type()
-    if issubclass(inputs_type, type(None)):
+    if not is_basemodel_subtype(inputs_type):
         return {}
 
     # generate action description
@@ -210,7 +210,7 @@ def build_action_description(
         # add inputs description
         inputs_description_items = []
         inputs_type = action._get_inputs_type()
-        if not issubclass(inputs_type, type(None)):
+        if is_basemodel_subtype(inputs_type):
             for field_name, field_info in inputs_type.model_fields.items():
                 inputs_description_items.append(
                     f"- {build_field_description(field_name, field_info, markdown=markdown, include_paths=include_paths)}"
@@ -230,7 +230,7 @@ def build_action_description(
                 outputs_description_items.append(
                     f"- {build_field_description(field_name, field_info, markdown=markdown, include_paths=include_paths)}"
                 )
-        elif not issubclass(outputs_type, type(None)):
+        elif outputs_type is not type(None):
             outputs_description_items.append(
                 f"- {build_field_description(None, FieldInfo(annotation=outputs_type), markdown=markdown, include_paths=include_paths)}"
             )
