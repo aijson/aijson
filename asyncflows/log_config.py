@@ -2,6 +2,8 @@ import logging
 import os
 
 import structlog
+from structlog.dev import plain_traceback
+from structlog.processors import dict_tracebacks
 from structlog_sentry import SentryProcessor
 
 
@@ -94,17 +96,15 @@ def configure_logging(pretty=True, additional_processors=None, level=None):
             structlog.dev.set_exc_info,  # add exception info
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         ]
-        if os.environ.get("SUPPRESS_LOG_COLORS"):
-            processors += [
-                structlog.dev.ConsoleRenderer(colors=False),
-            ]
-        else:
-            processors += [
-                structlog.dev.ConsoleRenderer(),
-            ]
+        processors += [
+            structlog.dev.ConsoleRenderer(
+                exception_formatter=plain_traceback,
+                colors=not bool(os.environ.get("SUPPRESS_LOG_COLORS")),
+            ),
+        ]
     else:
         processors += [
-            structlog.processors.format_exc_info,  # add exception info
+            dict_tracebacks,  # add exception info
             structlog.processors.JSONRenderer(),
         ]
 

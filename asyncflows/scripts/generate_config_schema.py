@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import traceback
 
 import pydantic
 from pydantic import TypeAdapter
@@ -28,7 +27,7 @@ def _get_action_invocations(
         log = get_logger()
         log.debug(
             "Failed to load action config",
-            exc_info=traceback.format_exc(),
+            exc_info=True,
         )
         return {}
 
