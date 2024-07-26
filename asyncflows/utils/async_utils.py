@@ -55,6 +55,7 @@ async def merge_iterators(
     coros: list[AsyncIterator[OutputType]],
     raise_: bool = False,
     report_finished: bool = False,
+    suppress_exception_logging: bool = False,
 ) -> AsyncIterator[tuple[IdType, OutputType | type[Sentinel] | Exception | None]]:
     async def worker(
         aiter: AsyncIterator[OutputType], iterator_id: IdType, queue: asyncio.Queue
@@ -92,12 +93,13 @@ async def merge_iterators(
             # A result or an exception was received.
             exception_raised, (id_, value_or_exc) = result
             if exception_raised:
-                log.exception(
-                    "Exception raised in worker",
-                    id=id_,
-                    exc_info=value_or_exc,
-                )
-                sentry_sdk.capture_exception(value_or_exc)
+                if not suppress_exception_logging:
+                    log.exception(
+                        "Exception raised in worker",
+                        id=id_,
+                        exc_info=value_or_exc,
+                    )
+                    sentry_sdk.capture_exception(value_or_exc)
                 # yield id_, None
                 # If any exception is received, cancel all workers and raise the exception.
                 # for worker_task in workers:

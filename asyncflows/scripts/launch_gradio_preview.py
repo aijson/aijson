@@ -441,6 +441,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     *zip(*target_outputs_and_agens),
                     raise_=True,
                     report_finished=True,
+                    suppress_exception_logging=True,
                 )
                 with context:
                     async for target_output, outputs in merge:
