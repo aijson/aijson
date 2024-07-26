@@ -2,7 +2,7 @@ import inspect
 import os
 import types
 from enum import Enum
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, TypedDict
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -244,18 +244,29 @@ def build_type_qualified_name(
         return name
 
     # Building the link to the source code file
-    try:
-        # Get the file and line number where the type is defined
-        source_file = inspect.getfile(type_)
-        source_line = inspect.getsourcelines(type_)[1]
-
-        # Construct the file URL
-        source_path = os.path.abspath(source_file)
-        file_url = f"file://{source_path}#L{source_line}"
-        return f"[{name}]({file_url})"
-    except Exception:
+    url_data = build_type_uri(type_)
+    if not url_data:
         # Fallback to just the type name if we can't get the source file
         return name
+    file_url = f"{url_data['file_uri']}#L{url_data['line']}"
+    return f"[{name}]({file_url})"
+
+
+URIDict = TypedDict("URIDict", {"name": str, "file_uri": str, "line": int})
+
+
+def build_type_uri(type_: type) -> URIDict | None:
+    # Get the file and line number where the type is defined
+    try:
+        name = type_.name
+        source_file = inspect.getfile(type_)
+        source_line = inspect.getsourcelines(type_)[1]
+        # Construct the file URL
+        source_path = os.path.abspath(source_file)
+        # file_url = f"file://{source_path}#L{source_line}"
+        return {"name": name, "file_uri": f"file://{source_path}", "line": source_line}
+    except:
+        return None
 
 
 def remove_optional(type_: type | None) -> tuple[type, bool]:

@@ -20,7 +20,11 @@ from asyncflows.models.config.value_declarations import (
 from asyncflows.models.io import Inputs, Outputs, DefaultOutputOutputs
 from asyncflows.models.primitives import HintLiteral, ExecutableId, ExecutableName
 from asyncflows.utils.pydantic_utils import is_basemodel_subtype
-from asyncflows.utils.type_utils import build_field_description, templatify_fields
+from asyncflows.utils.type_utils import (
+    build_field_description,
+    build_type_uri,
+    templatify_fields,
+)
 
 
 def build_input_fields(
@@ -408,17 +412,24 @@ def build_actions(
                 action_literal,
                 Field(
                     description=description,
-                    json_schema_extra={
-                        "markdownDescription": markdown_description + "\n\n---",
-                    }
-                    if markdown_description is not None
-                    else None,
+                    json_schema_extra=(
+                        {
+                            "markdownDescription": markdown_description + "\n\n---",
+                        }
+                        if markdown_description is not None
+                        else None
+                    ),
                 ),
             ]
 
+        uri = build_type_uri(action)
+
         # build base model field
         fields = {
-            "action": (action_literal, ...),
+            "action": (
+                action_literal,
+                Field(json_schema_extra={"uri": uri}),
+            ),
             "cache_key": (None | str | HintedValueDeclaration, None),
         }
 
