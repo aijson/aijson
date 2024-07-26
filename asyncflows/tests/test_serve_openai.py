@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from unittest.mock import ANY
 
 import openai
@@ -94,6 +95,11 @@ async def test_run_model_none(client):
     }
 
 
+@pytest.mark.skipif(
+    sys.version_info.minor >= 12,
+    reason="Segfault bug https://github.com/python/cpython/issues/122332",
+)
+@pytest.mark.allow_skip
 async def test_stream(client):
     # TODO test against a streaming action
     response = await client.chat.completions.create(
