@@ -4,6 +4,7 @@ from typing import Any, Annotated, Literal, Union, Type
 
 import pydantic
 from pydantic import Field, ConfigDict
+from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
@@ -22,7 +23,7 @@ from asyncflows.models.primitives import HintLiteral, ExecutableId, ExecutableNa
 from asyncflows.utils.pydantic_utils import is_basemodel_subtype
 from asyncflows.utils.type_utils import (
     build_field_description,
-    build_type_uri,
+    build_object_uri,
     templatify_fields,
 )
 
@@ -422,13 +423,19 @@ def build_actions(
                 ),
             ]
 
-        uri = build_type_uri(action)
+        uri_data = build_object_uri(action)
+        if uri_data is not None:
+            action_field = Field(
+                json_schema_extra=({"uri_data": typing.cast(JsonDict, uri_data)}),
+            )
+        else:
+            action_field = ...
 
         # build base model field
         fields = {
             "action": (
                 action_literal,
-                Field(json_schema_extra={"uri": uri}),
+                action_field,
             ),
             "cache_key": (None | str | HintedValueDeclaration, None),
         }
