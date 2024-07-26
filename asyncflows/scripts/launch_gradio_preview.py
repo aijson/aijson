@@ -127,6 +127,11 @@ def _construct_env_var_controls(
         dotenv_message = "If you put a `.env` file in the current directory, these will load automatically."
     gr.Markdown(dotenv_message)
 
+    gr.Markdown(
+        "**Note**: Due to [a gradio bug](https://github.com/gradio-app/gradio/issues/8855), "
+        "environment variables reset upon reload."
+    )
+
     @gr.render(inputs=env_var_state, triggers=[reload_state.change])
     def render_env_vars(env_var_tuples):
         fields = []
