@@ -256,6 +256,8 @@ URIDict = TypedDict("URIDict", {"file_uri": str, "line": int})
 
 
 def build_object_uri(obj: Any) -> URIDict | None:
+    if hasattr(obj, "_aijson__mapped_func"):
+        obj = obj._aijson__mapped_func
     try:
         # Get the file and line number where the type is defined
         source_file = inspect.getfile(obj)

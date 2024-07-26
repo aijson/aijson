@@ -92,6 +92,7 @@ def _construct_decorator(
             "cache": cache,
             "version": version,
             "run": run,
+            "_aijson__mapped_func": func,
         }
 
         def exec_body(ns):
