@@ -86,9 +86,7 @@ _openai_server = _restore_value("_openai_server")
 
 _serve_openai_task: asyncio.Task | None = _restore_value("_serve_openai_task")
 
-_action_errors: dict[
-    str, dict[str, BaseException]
-] = _restore_value('_action_errors') or {}
+_action_errors: dict[str, dict[str, str]] = _restore_value("_action_errors") or {}
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -467,11 +465,9 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                             # update action status
                             old_status = new_status = action_statuses[action_id]
                             if action_id in _action_errors[task_id]:
-                                exc = _action_errors[task_id][action_id]
+                                error_msg = _action_errors[task_id][action_id]
                                 del _action_errors[task_id][action_id]
-                                gr.Warning(
-                                    f"{action_id} threw an exception: {repr(exc)}"
-                                )
+                                gr.Warning(error_msg)
                                 new_status = ActionStatus.FAILED
                             elif (
                                 is_sentinel(outputs)
@@ -658,13 +654,35 @@ def _show_action_exceptions_processor(
     method_name: str,
     event_dict: EventDict,
 ) -> EventDict:
-    if event_dict.get("event") == "Action exception":
-        task_id = event_dict["trace_id"]
-        if task_id in _action_errors:
+    if "event" not in event_dict:
+        return event_dict
+
+    event = event_dict["event"]
+    if event != "Action exception" and not event_dict["event"].startswith(
+        "Failed to guess what language model to use"
+    ):
+        return event_dict
+
+    if "trace_id" not in event_dict or "action_id" not in event_dict:
+        return event_dict
+
+    task_id = event_dict["trace_id"]
+    action_id = event_dict["action_id"]
+
+    if task_id not in _action_errors:
+        return event_dict
+
+    if event_dict.get("exc_info"):
+        if isinstance(event_dict["exc_info"], BaseException):
+            exc = event_dict["exc_info"]
+        else:
             _, exc, _ = sys.exc_info()
             assert exc is not None
-            action_id = event_dict["action_id"]
-            _action_errors[task_id][action_id] = exc
+        _action_errors[task_id][action_id] = (
+            f"{action_id} threw an exception: {repr(exc)}"
+        )
+    else:
+        _action_errors[task_id][action_id] = event
     return event_dict
 
 
