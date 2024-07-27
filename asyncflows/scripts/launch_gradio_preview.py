@@ -2,7 +2,9 @@ import argparse
 import asyncio
 import contextlib
 import json
+import logging
 import os
+import sys
 import time
 import traceback
 import uuid
@@ -14,8 +16,10 @@ from tempfile import TemporaryDirectory
 from typing import Collection
 from unittest import mock
 
+from structlog.typing import EventDict
+
 from asyncflows import AsyncFlows, ShelveCacheRepo
-from asyncflows.log_config import get_logger
+from asyncflows.log_config import get_logger, configure_logging
 from asyncflows.models.config.flow import Loop
 from asyncflows.repos.cache_repo import CacheRepo
 from asyncflows.scripts.serve_openai import find_open_port, create_server
@@ -81,6 +85,10 @@ _task_cancelled: dict[str, bool] = _restore_value("_task_cancelled") or {}
 _openai_server = _restore_value("_openai_server")
 
 _serve_openai_task: asyncio.Task | None = _restore_value("_serve_openai_task")
+
+action_errors: dict[
+    str, dict[str, BaseException]
+] = {}  # this state is a bit hard to manage
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -404,6 +412,10 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     kwargs[variable_name] = val
                 ready_flow = flow.set_vars(**kwargs)
 
+                task_id = str(uuid.uuid4())
+                _task_cancelled[task_id] = False
+                ready_flow.log = ready_flow.log.bind(trace_id=task_id)
+
                 # set all objects as queued
                 # build objects and async generators
                 action_statuses = {}
@@ -432,9 +444,6 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 env_var_dict = {k: v for k, v in env_var_tuples if k and v}
                 context = TempEnvContext(env_var_dict)
 
-                task_id = str(uuid.uuid4())
-                _task_cancelled[task_id] = False
-
                 # Stream the variables
                 merge = merge_iterators(
                     log,
@@ -443,42 +452,57 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     report_finished=True,
                     suppress_exception_logging=True,
                 )
-                with context:
-                    async for target_output, outputs in merge:
-                        if _task_cancelled[task_id]:
-                            del _task_cancelled[task_id]
-                            return
+                action_errors[task_id] = {}
+                try:
+                    with context:
+                        async for target_output, outputs in merge:
+                            if _task_cancelled[task_id]:
+                                del _task_cancelled[task_id]
+                                return
 
-                        action_id = extract_root_var(target_output)
+                            action_id = extract_root_var(target_output)
 
-                        # update action status
-                        old_status = new_status = action_statuses[action_id]
-                        if is_sentinel(outputs) and old_status != ActionStatus.FAILED:
-                            if old_status == ActionStatus.PENDING:
-                                new_status = ActionStatus.FAILED
-                            else:
-                                new_status = ActionStatus.SUCCEEDED
-                        elif old_status == ActionStatus.PENDING:
-                            new_status = ActionStatus.RUNNING
-                        if old_status != new_status:
-                            action_statuses[action_id] = new_status
-                            yield {
-                                action_accordions[action_id]: gr.Accordion(
-                                    elem_classes=[
-                                        "my-status-indicator",
-                                        action_statuses[action_id].value,
-                                    ]
+                            # update action status
+                            old_status = new_status = action_statuses[action_id]
+                            if action_id in action_errors[task_id]:
+                                exc = action_errors[task_id][action_id]
+                                del action_errors[task_id][action_id]
+                                gr.Warning(
+                                    f"{action_id} threw an exception: {repr(exc)}"
                                 )
-                            }
+                                new_status = ActionStatus.FAILED
+                            elif (
+                                is_sentinel(outputs)
+                                and old_status != ActionStatus.FAILED
+                            ):
+                                if old_status == ActionStatus.PENDING:
+                                    gr.Warning(f"{action_id} yielded no outputs")
+                                    new_status = ActionStatus.FAILED
+                                else:
+                                    new_status = ActionStatus.SUCCEEDED
+                            elif old_status == ActionStatus.PENDING:
+                                new_status = ActionStatus.RUNNING
+                            if old_status != new_status:
+                                action_statuses[action_id] = new_status
+                                yield {
+                                    action_accordions[action_id]: gr.Accordion(
+                                        elem_classes=[
+                                            "my-status-indicator",
+                                            action_statuses[action_id].value,
+                                        ]
+                                    )
+                                }
 
-                        if is_sentinel(outputs):
-                            continue
-                        output_component = action_output_components[target_output]
-                        if not outputs and isinstance(output_component, gr.JSON):
-                            formatted_value = "{}"
-                        else:
-                            formatted_value = format_value(outputs)
-                        yield {output_component: formatted_value}
+                            if is_sentinel(outputs):
+                                continue
+                            output_component = action_output_components[target_output]
+                            if not outputs and isinstance(output_component, gr.JSON):
+                                formatted_value = "{}"
+                            else:
+                                formatted_value = format_value(outputs)
+                            yield {output_component: formatted_value}
+                finally:
+                    del action_errors[task_id]
 
             return _
 
@@ -625,6 +649,27 @@ def patch_gradio(watch_filepath: str):
                 del os.environ[env_var]
             else:
                 os.environ["env_var"] = val
+
+
+def _show_action_exceptions_processor(
+    logger: logging.Logger,
+    method_name: str,
+    event_dict: EventDict,
+) -> EventDict:
+    if event_dict.get("event") == "Action exception":
+        task_id = event_dict["trace_id"]
+        if task_id in action_errors:
+            _, exc, _ = sys.exc_info()
+            assert exc is not None
+            action_id = event_dict["action_id"]
+            action_errors[task_id][action_id] = exc
+    return event_dict
+
+
+if gr.NO_RELOAD:
+    configure_logging(
+        additional_processors=[_show_action_exceptions_processor],
+    )
 
 
 parser = argparse.ArgumentParser()
