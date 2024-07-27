@@ -99,8 +99,9 @@ def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
     if not dotenv_path:
         return None, default_env_vars
     presented_vars = [(name, val or "") for name, val in dotenv_values().items()]
-    for name, val in default_env_vars:
+    for name, default_val in default_env_vars:
         if not any(t[0] == name for t in presented_vars):
+            val = os.environ.get(name, default=default_val)
             presented_vars.append((name, val))
     return dotenv_path, presented_vars
 
