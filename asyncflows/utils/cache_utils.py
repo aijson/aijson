@@ -15,7 +15,11 @@ def _get_latest_modified_timestamp():
     for root, dirs, files in os.walk("."):
         for file in files:
             file_path = os.path.join(root, file)
-            file_modified_time = os.path.getmtime(file_path)
+            try:
+                file_modified_time = os.path.getmtime(file_path)
+            except FileNotFoundError:
+                # sometimes some dotfiles aren't found?
+                continue
             if file_modified_time > latest_timestamp:
                 latest_timestamp = file_modified_time
 
