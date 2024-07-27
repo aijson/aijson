@@ -241,13 +241,16 @@ def _construct_serve_openai_controls(
         _serve_openai_task = asyncio.create_task(_openai_server.serve())
 
         url = f"http://{host}:{port}"
-        return f"Serve OpenAI compatible API on: {url}"
+        local_url = f"http://localhost:{port}"
+        return f"**Status**: Serving on {url}. Use {local_url} to connect locally."
 
     gr.Markdown(
         "Serve an OpenAI-compatible Chat API:\n"
         "- using the variable values specified below\n"
         "- replacing the `Message Input` variable's value with the last message of the prompt\n"
-        "- making outputs of the flow available as different models in the API"
+        "- making outputs of the flow available as different models in the API\n\n"
+        "You can also serve an OpenAI-compatible endpoint by running `python -m ai.scripts.serve_openai --flow path/to/flow`  \n"
+        "**Note**: The API does not currently use the Environment Variables specified in the previous config pane. "
     )
 
     input_msg_dropdown = gr.Dropdown(
@@ -256,7 +259,7 @@ def _construct_serve_openai_controls(
         label="Message Input",
     )
     serve_button = gr.Button("Serve")
-    status_box = gr.Textbox(label="Status", interactive=False)
+    status_box = gr.Markdown("**Status**:")
     serve_button.click(
         serve,
         inputs=[
