@@ -70,7 +70,7 @@ def create_openai_app(
         if request.stream:
             return StreamingResponse(
                 stream_response(target_output, final_flow),
-                media_type="application/x-ndjson",
+                media_type="text/event-stream",
             )
         return await run_response(target_output, final_flow)
 
