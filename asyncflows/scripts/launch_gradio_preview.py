@@ -86,9 +86,9 @@ _openai_server = _restore_value("_openai_server")
 
 _serve_openai_task: asyncio.Task | None = _restore_value("_serve_openai_task")
 
-action_errors: dict[
+_action_errors: dict[
     str, dict[str, BaseException]
-] = {}  # this state is a bit hard to manage
+] = _restore_value('_action_errors') or {}
 
 
 def get_default_env_vars() -> tuple[str | None, list[tuple[str, str]]]:
@@ -452,7 +452,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                     report_finished=True,
                     suppress_exception_logging=True,
                 )
-                action_errors[task_id] = {}
+                _action_errors[task_id] = {}
                 try:
                     with context:
                         async for target_output, outputs in merge:
@@ -464,9 +464,9 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
 
                             # update action status
                             old_status = new_status = action_statuses[action_id]
-                            if action_id in action_errors[task_id]:
-                                exc = action_errors[task_id][action_id]
-                                del action_errors[task_id][action_id]
+                            if action_id in _action_errors[task_id]:
+                                exc = _action_errors[task_id][action_id]
+                                del _action_errors[task_id][action_id]
                                 gr.Warning(
                                     f"{action_id} threw an exception: {repr(exc)}"
                                 )
@@ -502,7 +502,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                                 formatted_value = format_value(outputs)
                             yield {output_component: formatted_value}
                 finally:
-                    del action_errors[task_id]
+                    del _action_errors[task_id]
 
             return _
 
@@ -658,11 +658,11 @@ def _show_action_exceptions_processor(
 ) -> EventDict:
     if event_dict.get("event") == "Action exception":
         task_id = event_dict["trace_id"]
-        if task_id in action_errors:
+        if task_id in _action_errors:
             _, exc, _ = sys.exc_info()
             assert exc is not None
             action_id = event_dict["action_id"]
-            action_errors[task_id][action_id] = exc
+            _action_errors[task_id][action_id] = exc
     return event_dict
 
 
