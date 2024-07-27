@@ -2,6 +2,7 @@ import asyncio
 import json
 import sys
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from json import JSONDecodeError
 from typing import Any, AsyncIterator, Iterable
 
@@ -85,16 +86,24 @@ class ActionService:
         # This relies on using a separate action instance for each trace_id
         self.action_cache: dict[ExecutableId, ActionSubclass] = {}
 
-    async def get_loop(self) -> asyncio.AbstractEventLoop:
+    @asynccontextmanager
+    async def get_loop(self):
         if self._loop is not None:
             loop = self._loop
         else:
             loop = asyncio.get_running_loop()
-        if sys.version_info.minor >= 12:
-            # override default task factory as eager
-            if loop.get_task_factory() is None:  # type: ignore
-                loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
-        return loop
+
+        if sys.version_info.minor < 12:
+            yield loop
+            return
+        asyncio.Task
+        # temporarily override default task factory as eager
+        task_factory_bak = loop.get_task_factory()
+        loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
+        try:
+            yield loop
+        finally:
+            loop.set_task_factory(task_factory_bak)
 
     def get_action_type(self, name: ExecutableName) -> type[ActionSubclass]:
         if name in self.actions:
@@ -1047,17 +1056,16 @@ class ActionService:
                 log.debug(
                     "Scheduling action task",
                 )
-                loop = await self.get_loop()
-                action_task = loop.create_task(
-                    self._run_and_broadcast_action_task(
-                        log=log,
-                        action_id=action_id,
-                        task_id=task_id,
-                        variables=variables,
-                        flow=flow,
-                        task_prefix=task_prefix,
-                    )
+                coro = self._run_and_broadcast_action_task(
+                    log=log,
+                    action_id=action_id,
+                    task_id=task_id,
+                    variables=variables,
+                    flow=flow,
+                    task_prefix=task_prefix,
                 )
+                async with self.get_loop() as loop:
+                    action_task = loop.create_task(coro)
                 if not action_task.done():
                     self.tasks[task_id] = action_task
             else:
