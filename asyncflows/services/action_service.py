@@ -46,6 +46,7 @@ from asyncflows.utils.async_utils import (
     measure_coro,
     measure_async_iterator,
 )
+from asyncflows.utils.llm_utils import infer_default_llm
 from asyncflows.utils.pydantic_utils import iterate_fields, is_basemodel_subtype
 from asyncflows.utils.redis_utils import get_redis_url
 from asyncflows.utils.sentinel_utils import is_sentinel, Sentinel, is_set_of_tuples
@@ -122,6 +123,32 @@ class ActionService:
         self.action_cache[action_id] = action
         return action
 
+    async def _get_default_model(
+        self,
+        log: structlog.stdlib.BoundLogger,
+        variables: dict[str, Any],
+    ) -> ModelConfig | None:
+        # TODO generalize default arg specification and inference to a separate type that inputs can reference,
+        #  like IO modifiers
+
+        # default_model is a special case,
+        # allows ValueDeclaration union except for links and lambdas
+        model_config_dict = await self._collect_inputs_from_context(
+            log,
+            self.config.default_model,
+            variables,
+        )
+        if not isinstance(model_config_dict, dict):
+            raise RuntimeError("Rendered default model config is not a dict")
+        if model_config_dict.get("model") is None:
+            inferred_model = await infer_default_llm()
+            if inferred_model is None:
+                return None
+            model_config_dict["model"] = inferred_model
+        default_model = ModelConfig.model_validate(model_config_dict)
+
+        return default_model
+
     async def _run_action(
         self,
         log: structlog.stdlib.BoundLogger,
@@ -136,14 +163,21 @@ class ActionService:
         if isinstance(inputs, BlobRepoInputs):
             inputs._blob_repo = self.blob_repo
         if isinstance(inputs, DefaultModelInputs):
-            # default_model is a special case,
-            # allows ValueDeclaration union except for links and lambdas
-            model_config_dict = await self._collect_inputs_from_context(
-                log,
-                self.config.default_model,
-                variables,
+            default_model = await self._get_default_model(
+                log=log,
+                variables=variables,
             )
-            inputs._default_model = ModelConfig.model_validate(model_config_dict)
+            if default_model is None:
+                log.error(
+                    "Failed to guess what language model to use. "
+                    "Either specify `default_model` at the top of the config, "
+                    f"set {action_id}'s `model` input, "
+                    "provide an `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` environment variable, "
+                    "or run Ollama locally at `localhost:11434`."
+                )
+                return
+            log.info("Guessed what language model to use", model=default_model.model)
+            inputs._default_model = default_model
 
         # Get the action instance
         action = self._get_action_instance(log, action_id, flow=flow)

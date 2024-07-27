@@ -31,6 +31,7 @@ def assert_logs(
     blobs_retrieved: int = 0,
     uncacheable_warning: bool = False,
     no_output: bool = False,
+    guessed_llm: bool = False,
 ):
     # ignore some logs
     # log_list[:] = [
@@ -76,6 +77,13 @@ def assert_logs(
         elif not final_invocation_flag and not ignore_cache:
             log_dict = log_list.pop(0)
             assert log_dict["event"] == "Cache miss"
+            assert log_dict["action"] == action_name
+            assert log_dict["action_id"] == action_id
+            assert log_dict["log_level"] == "info"
+
+        if guessed_llm:
+            log_dict = log_list.pop(0)
+            assert log_dict["event"] == "Guessed what language model to use"
             assert log_dict["action"] == action_name
             assert log_dict["action_id"] == action_id
             assert log_dict["log_level"] == "info"
@@ -432,9 +440,10 @@ async def test_prompt_inputs(log, in_memory_action_service, log_history):
     #  any time any logs get added/removed (including debug)
     #  better yet, find a streaming way to interleavingly check against logs
     assert_logs(
-        log_history[-4:],
+        log_history[-5:],
         action_id,
         action_name,
+        guessed_llm=True,
     )
 
 

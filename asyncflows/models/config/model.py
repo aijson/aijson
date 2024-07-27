@@ -81,7 +81,7 @@ class ModelConfig(StrictModel):
     top_p: float | None = None
     frequency_penalty: float | None = None
     presence_penalty: float | None = None
-    model: ModelType = "ollama/llama3"
+    model: ModelType
     api_base: Optional[str] = None
     auth_token: Optional[str] = None
 

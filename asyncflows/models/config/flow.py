@@ -6,7 +6,7 @@ from asyncflows.models.config.action import (
     ActionInvocation,
 )
 from asyncflows.models.config.common import StrictModel
-from asyncflows.models.config.model import ModelConfig
+from asyncflows.models.config.model import OptionalModelConfig
 from asyncflows.utils.type_utils import transform_and_templatify_type
 from asyncflows.models.config.value_declarations import ValueDeclaration
 from asyncflows.models.primitives import (
@@ -44,7 +44,7 @@ def build_model_config(
     )
 
     return transform_and_templatify_type(
-        ModelConfig,
+        OptionalModelConfig,
         add_union=HintedValueDeclaration,  # type: ignore
         strict=strict,
     )
@@ -55,7 +55,7 @@ ModelConfigDeclaration = build_model_config()
 
 class ActionConfig(StrictModel):
     version: Literal["0.1"]  # TODO implement migrations
-    default_model: ModelConfigDeclaration = ModelConfig()  # type: ignore
+    default_model: ModelConfigDeclaration = OptionalModelConfig()  # type: ignore
     action_timeout: float = 360
     flow: "FlowConfig"
     default_output: ContextVarPath | None = None  # TODO `| ValueDeclaration`
