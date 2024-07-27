@@ -232,6 +232,7 @@ def _construct_serve_openai_controls(
 
         # TODO refactor this to dynamically creating a flow calling a subflow
         #  and running in a subprocess
+        # TODO run it with the specified environment variables
 
         _openai_server = await create_server(
             flow_with_vars,
@@ -442,7 +443,7 @@ def construct_gradio_app(log, variables: set[str], flow: AsyncFlows):
                 }
 
                 # Prepare the environment variables
-                env_var_dict = {k: v for k, v in env_var_tuples if k and v}
+                env_var_dict = {k: v or None for k, v in env_var_tuples if k}
                 context = TempEnvContext(env_var_dict)
 
                 # Stream the variables

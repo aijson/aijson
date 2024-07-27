@@ -25,7 +25,7 @@ class SingletonContext:
 
 
 class TempEnvContext(SingletonContext):
-    def __init__(self, env_vars: dict[str, str]):
+    def __init__(self, env_vars: dict[str, str | None]):
         super().__init__()
         self.env_vars = env_vars
         self.env_var_baks: None | dict[str, None | str] = None
@@ -33,8 +33,13 @@ class TempEnvContext(SingletonContext):
     def enter(self):
         env_var_baks = {}
         for key, value in self.env_vars.items():
-            env_var_baks[key] = os.environ.get(key)
-            os.environ[key] = value
+            if value is None:
+                if key in os.environ:
+                    env_var_baks[key] = os.environ.get(key)
+                    del os.environ[key]
+            else:
+                env_var_baks[key] = os.environ.get(key)
+                os.environ[key] = value
         self.env_var_baks = env_var_baks
 
     def exit(self):
