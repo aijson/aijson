@@ -74,10 +74,7 @@ class ActionService:
         self.blob_repo = blob_repo
         self.config = config
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
-        if sys.version_info.minor >= 12:
-            self.loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
-
+        self._loop = loop
         self.tasks: dict[str, asyncio.Task] = {}
         self.action_output_broadcast: dict[str, list[asyncio.Queue]] = defaultdict(list)
         self.new_listeners: dict[str, list[asyncio.Queue]] = defaultdict(list)
@@ -86,6 +83,17 @@ class ActionService:
         self.actions: dict[ExecutableName, type[ActionSubclass]] = get_actions_dict()
         # This relies on using a separate action instance for each trace_id
         self.action_cache: dict[ExecutableId, ActionSubclass] = {}
+
+    async def get_loop(self) -> asyncio.AbstractEventLoop:
+        if self._loop is not None:
+            loop = self._loop
+        else:
+            loop = asyncio.get_running_loop()
+        if sys.version_info.minor >= 12:
+            # override default task factory as eager
+            if loop.get_task_factory() is None:  # type: ignore
+                loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
+        return loop
 
     def get_action_type(self, name: ExecutableName) -> type[ActionSubclass]:
         if name in self.actions:
@@ -1005,7 +1013,8 @@ class ActionService:
                 log.debug(
                     "Scheduling action task",
                 )
-                action_task = self.loop.create_task(
+                loop = await self.get_loop()
+                action_task = loop.create_task(
                     self._run_and_broadcast_action_task(
                         log=log,
                         action_id=action_id,
