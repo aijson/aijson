@@ -2,9 +2,9 @@ import asyncio
 import json
 import sys
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import contextmanager
 from json import JSONDecodeError
-from typing import Any, AsyncIterator, Iterable
+from typing import Any, AsyncIterator, Iterable, Coroutine
 
 from pydantic_core import PydanticSerializationError
 from typing_extensions import assert_never
@@ -86,8 +86,9 @@ class ActionService:
         # This relies on using a separate action instance for each trace_id
         self.action_cache: dict[ExecutableId, ActionSubclass] = {}
 
-    @asynccontextmanager
-    async def get_loop(self):
+    @contextmanager
+    def _get_loop(self):
+        # careful using this, you should NOT async yield within the context
         if self._loop is not None:
             loop = self._loop
         else:
@@ -96,7 +97,7 @@ class ActionService:
         if sys.version_info.minor < 12:
             yield loop
             return
-        asyncio.Task
+
         # temporarily override default task factory as eager
         task_factory_bak = loop.get_task_factory()
         loop.set_task_factory(asyncio.eager_task_factory)  # type: ignore
@@ -104,6 +105,10 @@ class ActionService:
             yield loop
         finally:
             loop.set_task_factory(task_factory_bak)
+
+    def create_task(self, coro: Coroutine):
+        with self._get_loop() as loop:
+            return loop.create_task(coro)
 
     def get_action_type(self, name: ExecutableName) -> type[ActionSubclass]:
         if name in self.actions:
@@ -1064,8 +1069,7 @@ class ActionService:
                     flow=flow,
                     task_prefix=task_prefix,
                 )
-                async with self.get_loop() as loop:
-                    action_task = loop.create_task(coro)
+                action_task = self.create_task(coro)
                 if not action_task.done():
                     self.tasks[task_id] = action_task
             else:
