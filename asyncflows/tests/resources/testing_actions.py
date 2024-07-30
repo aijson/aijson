@@ -19,7 +19,7 @@ from asyncflows.actions.utils.prompt_context import (
     ContextElement,
 )
 from asyncflows.models.blob import Blob
-from asyncflows.actions.prompt import Inputs as PromptInputs
+from asyncflows.actions.llm import Inputs as PromptInputs
 
 # Add
 

@@ -3,7 +3,7 @@ from unittest.mock import patch
 from asyncflows import AsyncFlows
 from asyncflows.utils.loader_utils import load_config_file
 
-from asyncflows.actions.prompt import (
+from asyncflows.actions.llm import (
     Outputs as PromptOutputs,
     Prompt,
     Inputs as PromptInputs,

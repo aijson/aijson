@@ -155,7 +155,7 @@ async def test_measure_action_request_with_mocked_aiohttp(
 @pytest.mark.slow
 @pytest.mark.allow_skip
 async def test_measure_live_prompt_action(log, temp_dir, model):
-    from asyncflows.actions.prompt import Inputs, Prompt
+    from asyncflows.actions.llm import Inputs, Prompt
     from asyncflows.models.config.model import ModelConfig
     from asyncflows.actions.utils.prompt_context import TextElement
 

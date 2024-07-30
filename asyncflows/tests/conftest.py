@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from asyncflows.utils.action_utils import get_actions_dict
-from asyncflows.actions.prompt import Outputs as PromptOutputs, Prompt
+from asyncflows.actions.llm import Outputs as PromptOutputs, Prompt
 from asyncflows.actions.transformer import (
     BaseTransformerInputs as TransformerInputs,
     Outputs as TransformerOutputs,
