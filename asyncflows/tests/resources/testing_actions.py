@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator
+from typing import AsyncIterator, assert_never
 
 from asyncflows.models.config.action import (
     Action,
@@ -17,6 +17,7 @@ from asyncflows.actions.utils.prompt_context import (
     PromptElement,
     RoleElement,
     ContextElement,
+    TextElement,
 )
 from asyncflows.models.blob import Blob
 from asyncflows.actions.llm import Inputs as PromptInputs
@@ -165,12 +166,18 @@ class TransformingInput(Action[TransformingPromptInputs, TransformingPromptOutpu
 
     async def run(self, inputs: TransformingPromptInputs) -> TransformingPromptOutputs:
         first_element = inputs.context[0]
-        if isinstance(first_element, RoleElement):
+
+        if isinstance(first_element, str):
+            text = first_element
+        elif isinstance(first_element, RoleElement):
             text = ""
         elif isinstance(first_element, ContextElement):
             text = first_element.value
-        else:
+        elif isinstance(first_element, TextElement):
             text = first_element.text
+        else:
+            assert_never(first_element)
+
         return TransformingPromptOutputs(
             context_value=text,
             nested_context_value=text,

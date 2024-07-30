@@ -150,6 +150,21 @@ Apples
                 {"role": "user", "content": "This is another test.\n\nAnd a third"},
             ],
         ),
+        (
+            "I am a test",
+            QuoteStyle.BACKTICKS,
+            [{"role": "user", "content": "I am a test"}],
+        ),
+        (
+            [
+                TextElement(
+                    text="This is a test",
+                ),
+                "I am another test",
+            ],
+            QuoteStyle.BACKTICKS,
+            [{"role": "user", "content": "This is a test\n\nI am another test"}],
+        ),
     ],
 )
 def test_build_messages(action, message_config, quote_style, expected_text):
