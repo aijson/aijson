@@ -108,7 +108,7 @@ def create_openai_app(
 
 def find_open_port(start_port: int | None = None, max_tries: int = 50) -> int:
     if start_port is None:
-        start_port = 27215
+        start_port = 6789
     retries = 0
     while retries < max_tries:
         try:
