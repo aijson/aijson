@@ -399,6 +399,8 @@ def build_actions(
         # build action literal
         action_literal = Literal[action.name]  # type: ignore
 
+        json_schema_extra_items = {}
+
         # add title
         action_literal = Annotated[
             action_literal,
@@ -413,29 +415,30 @@ def build_actions(
                 action_literal,
                 Field(
                     description=description,
-                    json_schema_extra=(
-                        {
-                            "markdownDescription": markdown_description + "\n\n---",
-                        }
-                        if markdown_description is not None
-                        else None
-                    ),
                 ),
             ]
+            if markdown_description is not None:
+                json_schema_extra_items["markdownDescription"] = markdown_description + "\n\n---",
 
+        # add uri data for LSP
         uri_data = build_object_uri(action)
         if uri_data is not None:
-            action_field = Field(
-                json_schema_extra=({"uri_data": typing.cast(JsonDict, uri_data)}),
-            )
-        else:
-            action_field = ...
+            json_schema_extra_items["uri_data"] = typing.cast(JsonDict, uri_data)
+
+        # add json schema extra (this has to be separate else one overrides the other)
+        if json_schema_extra_items:
+            action_literal = Annotated[
+                action_literal,
+                Field(
+                    json_schema_extra=json_schema_extra_items
+                ),
+            ]
 
         # build base model field
         fields = {
             "action": (
                 action_literal,
-                action_field,
+                ...,
             ),
             "cache_key": (None | str | HintedValueDeclaration, None),
         }
