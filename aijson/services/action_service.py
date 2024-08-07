@@ -51,7 +51,12 @@ from aijson.utils.async_utils import (
 from aijson.utils.llm_utils import infer_default_llm
 from aijson.utils.pydantic_utils import iterate_fields, is_basemodel_subtype
 from aijson.utils.redis_utils import get_redis_url
-from aijson.utils.sentinel_utils import is_sentinel, Sentinel, is_set_of_tuples
+from aijson.utils.sentinel_utils import (
+    is_sentinel,
+    Sentinel,
+    is_set_of_tuples,
+    SentinelType,
+)
 
 ActionSubclass = InternalActionBase[Any, Any]
 Inputs = BaseModel
@@ -368,7 +373,7 @@ class ActionService:
         variables: dict[str, Any],
         flow: FlowConfig | None = None,
         task_prefix: str = "",
-    ) -> AsyncIterator[dict[ExecutableId, Outputs] | type[Sentinel]]:
+    ) -> AsyncIterator[dict[ExecutableId, Outputs] | SentinelType]:
         if flow is None:
             flow = self.config.flow
         executable_dependencies = {d for d in dependencies if d[0] in flow}
@@ -401,7 +406,7 @@ class ActionService:
         variables: dict[str, Any],
         flow: FlowConfig | None = None,
         task_prefix: str = "",
-    ) -> AsyncIterator[Inputs | None | type[Sentinel]]:
+    ) -> AsyncIterator[Inputs | None | SentinelType]:
         if flow is None:
             flow = self.config.flow
         # Get action type
@@ -478,7 +483,7 @@ class ActionService:
         variables: None | dict[str, Any] = None,
         flow: FlowConfig | None = None,
         task_prefix: str = "",
-    ) -> AsyncIterator[dict[ExecutableId, Outputs] | type[Sentinel]]:
+    ) -> AsyncIterator[dict[ExecutableId, Outputs] | SentinelType]:
         if variables is None:
             variables = {}
         if flow is None:
@@ -571,7 +576,7 @@ class ActionService:
         self,
         log: structlog.stdlib.BoundLogger,
         task_id: TaskId,
-        outputs: Outputs | None | type[Sentinel],
+        outputs: Outputs | None | SentinelType,
         queues: list[asyncio.Queue] | None = None,
     ):
         if queues is None:
@@ -597,7 +602,7 @@ class ActionService:
         action_id: ExecutableId,
         cache_key: str | None,
         flow: FlowConfig,
-    ) -> type[Sentinel] | Outputs:
+    ) -> SentinelType | Outputs:
         action_invocation = flow[action_id]
         if not isinstance(action_invocation, ActionInvocation):
             log.error("Not an action", action_id=action_id)
@@ -655,7 +660,7 @@ class ActionService:
         variables: dict[str, Any],
         flow: FlowConfig,
         task_prefix: str,
-    ) -> str | type[Sentinel] | None:
+    ) -> str | SentinelType | None:
         if action_config.cache_key is None:
             return None
         dependencies = self._get_dependency_ids_and_stream_flag_from_input_spec(

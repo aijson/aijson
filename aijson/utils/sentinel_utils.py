@@ -9,7 +9,10 @@ class Sentinel:
     pass
 
 
-def is_sentinel(value: Any) -> TypeIs[type[Sentinel]]:
+SentinelType = type[Sentinel]
+
+
+def is_sentinel(value: Any) -> TypeIs[SentinelType]:
     return is_subtype(value, Sentinel)
 
 

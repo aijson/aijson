@@ -8,7 +8,7 @@ from typing import TypeVar, AsyncIterator, Awaitable, Sequence
 import sentry_sdk
 import structlog
 
-from aijson.utils.sentinel_utils import Sentinel
+from aijson.utils.sentinel_utils import Sentinel, SentinelType
 
 T = TypeVar("T")
 IdType = TypeVar("IdType")
@@ -58,7 +58,7 @@ async def merge_iterators(
     raise_: bool = False,
     report_finished: bool = False,
     suppress_exception_logging: bool = False,
-) -> AsyncIterator[tuple[IdType, OutputType | type[Sentinel] | Exception | None]]:
+) -> AsyncIterator[tuple[IdType, OutputType | SentinelType | Exception | None]]:
     async def worker(
         aiter: AsyncIterator[OutputType], iterator_id: IdType, queue: asyncio.Queue
     ):
