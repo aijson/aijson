@@ -1,19 +1,19 @@
-from typing import Any
+import enum
+from typing import Any, Literal
 
 from typing_extensions import TypeIs
 
-from aijson.utils.subtype_utils import is_subtype
+
+class SentinelEnum(enum.Enum):
+    Sentinel = enum.auto()
 
 
-class Sentinel:
-    pass
-
-
-SentinelType = type[Sentinel]
+SentinelType = Literal[SentinelEnum.Sentinel]
+Sentinel = SentinelEnum.Sentinel
 
 
 def is_sentinel(value: Any) -> TypeIs[SentinelType]:
-    return is_subtype(value, Sentinel)
+    return value is Sentinel
 
 
 def is_set_of_tuples(value: Any) -> TypeIs[set[tuple]]:
