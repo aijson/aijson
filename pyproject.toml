@@ -1,0 +1,95 @@
+[tool.poetry]
+name = "aijson-core"
+version = "0.1.0"
+description = "Low-code config language for AI pipelines"
+authors = ["Rafael Irgolic <hello@irgolic.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [
+    { include = "aijson" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+pydantic = "^2.4.2"
+tenacity = "^8.2.3"
+pyyaml = "^6.0.1"
+cryptography = "^41.0.4"
+redis = "^5.0.1"
+litellm = "^1.30.3"
+aiohttp = "^3.9.1"
+structlog = "^23.2.0"
+numpy = "^1.26.2"
+structlog-sentry = "^2.0.3"
+greenlet = "^3.0.3"
+nltk = "^3.8.1"
+simpleeval = "^0.9.13"
+anyio = "^3.7.1,<4.0.0"
+datamodel-code-generator = "^0.25.6"
+
+aioboto3 = { version = "^12.2.0", optional = false }
+types-aioboto3 = {extras = ["s3"], version = "^12.2.0", optional = false }
+
+openai = { version = "^1", optional = true }
+anthropic = { version = "^0.21.3", optional = true }
+google-cloud-aiplatform = { version = "^1.43.0", optional = true }
+pypdfium2 = { version = "^4.24.0", optional = true }
+ocrmypdf = { version = "^16.2.0", optional = true }
+sentence-transformers = { version = "^2.6.1,<2.7.0", optional = true }
+infinity-emb = { version = "^0.0.32", optional = true, extras = ["torch", "optimum"] }
+psycopg2 = { version = "^2.9.9", optional = true }
+asyncpg = { version = "^0.29.0", optional = true }
+pandas = { version = "^2.2.2", optional = true }
+sqlalchemy = { version = "^2.0.30", optional = true }
+aiosqlite = { version = "^0.20.0", optional = true }
+gradio = "^4.38.1"
+python-dotenv = "^1.0.1"
+
+
+[tool.poetry.extras]
+#s3 = ["aioboto3", "types-aioboto3"]
+openai = ["openai"]
+anthropic = ["anthropic"]
+gcloud = ["google-cloud-aiplatform"]
+pg = ["sqlalchemy", "psycopg2", "asyncpg", "pandas"]
+sqlite = ["sqlalchemy", "aiosqlite", "pandas"]
+transformers = ["sentence-transformers", "infinity-emb"]
+pdf = ["pypdfium2", "ocrmypdf"]
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-mock = "^3.12.0"
+pytest-asyncio = "^0.21.1"
+pyright = "1.1.347"
+ruff = "^0.3.0"
+aioresponses = "^0.7.6"
+dash = "^2.14.2"
+dash-cytoscape = "^0.3.0"
+
+[tool.poetry.group.test.dependencies]
+aioresponses = "^0.7.6"
+jsonschema = "^4.21.0"
+jinja2schema = {git = "https://github.com/irgolic/jinja2schema.git", branch = "master"}
+moto = {extras = ["server"], version = "^4.2.13"}
+aiosqlite = "^0.20.0"
+aijson-meta = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+reportIncompatibleVariableOverride = false
+#enableExperimentalFeatures = true
+reportUnnecessaryTypeIgnoreComment = "warning"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "allow_skip: marks tests that are allowed to be skipped",
+]
+testpaths = [
+    "aijson/tests",
+]
