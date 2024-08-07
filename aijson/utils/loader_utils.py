@@ -18,6 +18,8 @@ def load_config_text(config_text: str) -> ActionConfig:
 def load_config_file(
     filename: str, config_model: type[ActionConfig] | None = None
 ) -> ActionConfig:
+    # when you run flows, you shouldn't run them with config_model=ActionConfig, else it won't know how to coerce fields
+    # TODO load it non-strict before loading it for real, to show more informative errors (eg action is not installed)
     if not os.path.exists(filename):
         raise FileNotFoundError(f"Could not find {filename}")
 

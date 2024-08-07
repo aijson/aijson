@@ -270,7 +270,8 @@ def build_object_uri(obj: Any) -> URIDict | None:
         return None
 
 
-def remove_optional(type_: type | None) -> tuple[type, bool]:
+# TODO this used to be `-> tuple[type, bool]`, is there a better typehint now that type[Any] is not subclass of type?
+def remove_optional(type_: type | None) -> tuple[Any, bool]:
     if type_ is None:
         return typing.Any, True
     if typing.get_origin(type_) in [Union, types.UnionType]:

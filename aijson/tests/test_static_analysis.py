@@ -15,12 +15,12 @@ from aijson.utils.static_utils import (
     "actions_path, variables, expected",
     [
         (
-            "testing_actions.yaml",
+            "testing_actions.ai.yaml",
             set(),
             True,
         ),
-        ("default_model_var.yaml", set(), False),
-        ("default_model_var.yaml", {"some_model"}, True),
+        ("default_model_var.ai.yaml", set(), False),
+        ("default_model_var.ai.yaml", {"some_model"}, True),
     ],
 )
 def test_static_analysis(
@@ -38,11 +38,11 @@ def test_static_analysis(
     "path, expected_variables",
     (
         (
-            "aijson/examples/debono.yaml",
+            "examples/debono.ai.yaml",
             {"query"},
         ),
         (
-            "aijson/examples/chatbot.yaml",
+            "examples/chatbot.ai.yaml",
             {"pdf_filepaths", "message", "conversation_history"},
         ),
     ),
@@ -56,11 +56,11 @@ def test_get_config_variables(path, expected_variables):
     "path, expected_map",
     (
         (
-            "aijson/examples/hello_world.yaml",
+            "examples/hello_world.ai.yaml",
             {"hello_world": set()},
         ),
         (
-            "aijson/examples/chatbot.yaml",
+            "examples/chatbot.ai.yaml",
             {
                 "chatbot": {"pdf_filepaths", "conversation_history", "message"},
                 "extract_chatbot": {"pdf_filepaths", "conversation_history", "message"},
@@ -82,11 +82,11 @@ def test_get_variable_dependency_map(path, expected_map):
     "path, expected_map",
     (
         (
-            "aijson/examples/hello_world.yaml",
+            "examples/hello_world.ai.yaml",
             {"hello_world": set()},
         ),
         (
-            "aijson/examples/chatbot.yaml",
+            "examples/chatbot.ai.yaml",
             {
                 "chatbot": {
                     "extract_pdf_texts",

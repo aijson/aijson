@@ -24,7 +24,8 @@ def PrivateAttr(*args, **kwargs):
 
 
 # TODO ensure that inputs don't contain `id` or `action` as fields
-Inputs = TypeVar("Inputs", bound=Union[pydantic.BaseModel, type(None)])
+# TODO is this type ignore appropriate?
+Inputs = TypeVar("Inputs", bound=Union[pydantic.BaseModel, type(None)])  # pyright: ignore[reportInvalidTypeForm]
 Outputs = TypeVar("Outputs")
 
 

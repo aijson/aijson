@@ -155,9 +155,9 @@ async def test_measure_action_request_with_mocked_aiohttp(
 @pytest.mark.slow
 @pytest.mark.allow_skip
 async def test_measure_live_prompt_action(log, temp_dir, model):
-    from aijson.actions.llm import Inputs, Prompt
+    from aijson_ml.actions.llm import Inputs, Prompt
     from aijson.models.config.model import ModelConfig
-    from aijson.actions.utils.prompt_context import TextElement
+    from aijson_ml.utils.prompt_context import TextElement
 
     expected_response = "This is the response."
 

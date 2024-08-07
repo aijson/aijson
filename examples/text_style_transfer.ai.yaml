@@ -1,0 +1,15 @@
+version: "0.1"
+
+flow:
+  text_style_transfer:
+    action: llm
+    prompt:
+      - role: system
+        text: You're a helpful assistant. Respond only in the style of the example.
+      - role: user
+        text: |
+          Here is a writing example:
+          ```
+          {{ writing_sample }}
+          ```
+          In the style of the example, write about {{ topic }}.

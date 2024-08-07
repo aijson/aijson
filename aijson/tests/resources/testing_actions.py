@@ -13,14 +13,14 @@ from aijson.models.io import (
     BlobRepoInputs,
     BaseModel,
 )
-from aijson.actions.utils.prompt_context import (
+from aijson_ml.utils.prompt_context import (
     PromptElement,
     RoleElement,
     ContextElement,
     TextElement,
 )
 from aijson.models.blob import Blob
-from aijson.actions.llm import Inputs as PromptInputs
+from aijson_ml.actions.llm import Inputs as PromptInputs
 
 # Add
 

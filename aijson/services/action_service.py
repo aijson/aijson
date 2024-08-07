@@ -1,6 +1,7 @@
 import asyncio
 import json
 import sys
+import typing
 from collections import defaultdict
 from contextlib import contextmanager
 from json import JSONDecodeError
@@ -311,7 +312,7 @@ class ActionService:
             dependencies.update(
                 (d, template.stream) for d in template.get_dependencies()
             )
-        elif isinstance(input_spec, (ValueDeclaration, str)):
+        elif isinstance(input_spec, ValueDeclaration):
             dependencies.update(
                 (d, input_spec.stream) for d in input_spec.get_dependencies()
             )
@@ -450,6 +451,10 @@ class ActionService:
 
             # Compile the inputs
             context = dependency_outputs | variables
+
+            # TODO why does this say it's a union with "UnionType"
+            context = typing.cast(dict[str, Any], context)
+
             rendered_inputs = {}
             try:
                 rendered_inputs = await self._collect_inputs_from_context(
@@ -672,6 +677,10 @@ class ActionService:
                 return Sentinel
             # Compile the inputs
             context = dependency_outputs | variables
+
+            # TODO why does this say it's a union with "UnionType"
+            context = typing.cast(dict[str, Any], context)
+
             cache_key = str(
                 await self._collect_inputs_from_context(
                     log,
@@ -748,6 +757,8 @@ class ActionService:
         if is_sentinel(cache_key):
             log.error("Failed to create cache key")
             return
+        # TODO TypeIs isn't narrowing the negative type properly
+        cache_key = typing.cast(str | None, cache_key)
 
         if cache_key is not None:
             hardcoded_cache_key = cache_key
@@ -779,6 +790,8 @@ class ActionService:
             if is_sentinel(inputs):
                 # propagate error
                 return
+            # TODO TypeIs isn't narrowing the negative type properly
+            inputs = typing.cast(Inputs | None, inputs)
             cache_hit = False
 
             # Check cache
@@ -941,11 +954,16 @@ class ActionService:
         if is_sentinel(dependency_outputs):
             return
 
+        context = dependency_outputs | variables
+
+        # TODO why does this say it's a union with "UnionType"
+        context = typing.cast(dict[str, Any], context)
+
         # Render the variable
         looped_variable = await self._collect_inputs_from_context(
             log,
             input_spec=loop.in_,
-            context=dependency_outputs | variables,
+            context=context,
         )
         if not isinstance(looped_variable, Iterable):
             log.error(

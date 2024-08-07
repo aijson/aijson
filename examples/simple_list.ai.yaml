@@ -1,0 +1,10 @@
+version: "0.1"
+
+flow:
+  ask:
+    action: llm
+    prompt: List some examples of {{ thing }}
+  extract:
+    action: extract_list
+    text:
+      link: ask

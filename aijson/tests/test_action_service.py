@@ -5,7 +5,7 @@ from unittest import mock
 
 import aijson.tests.resources.testing_actions  # noqa: F401
 from aijson.tests.resources.testing_actions import AddOutputs
-from aijson.actions.utils.prompt_context import (
+from aijson_ml.utils.prompt_context import (
     RoleElement,
     TextElement,
     ContextElement,

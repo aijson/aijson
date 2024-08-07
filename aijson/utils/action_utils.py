@@ -418,7 +418,9 @@ def build_actions(
                 ),
             ]
             if markdown_description is not None:
-                json_schema_extra_items["markdownDescription"] = markdown_description + "\n\n---",
+                json_schema_extra_items["markdownDescription"] = (
+                    markdown_description + "\n\n---",
+                )
 
         # add uri data for LSP
         uri_data = build_object_uri(action)
@@ -429,9 +431,7 @@ def build_actions(
         if json_schema_extra_items:
             action_literal = Annotated[
                 action_literal,
-                Field(
-                    json_schema_extra=json_schema_extra_items
-                ),
+                Field(json_schema_extra=json_schema_extra_items),
             ]
 
         # build base model field
@@ -500,7 +500,7 @@ def get_actions_dict(
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
 
-    # import all action entrypoints, including `aijson.actions` and other installed packages
+    # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
     for entrypoint in entrypoints.select(name="actions"):
         dist_name = entrypoint.dist.name

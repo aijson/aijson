@@ -14,8 +14,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from aijson.utils.action_utils import get_actions_dict
-from aijson.actions.llm import Outputs as PromptOutputs, Prompt
-from aijson.actions.transformer import (
+from aijson.utils.llm_utils import infer_default_llm
+from aijson_ml.actions.llm import Outputs as PromptOutputs, Prompt
+from aijson_ml.actions.transformer import (
     BaseTransformerInputs as TransformerInputs,
     Outputs as TransformerOutputs,
     Retrieve,
@@ -278,7 +279,7 @@ def testing_actions_type():
 
 @pytest.fixture()
 def testing_actions(testing_actions_type):
-    with open("aijson/tests/resources/testing_actions.yaml") as f:
+    with open("aijson/tests/resources/testing_actions.ai.yaml") as f:
         return testing_actions_type.model_validate(yaml.safe_load(f))
 
 
@@ -346,7 +347,7 @@ def mock_prompt_result():
 
 
 @pytest.fixture()
-def mock_prompt_action(mock_prompt_result):
+async def mock_prompt_action(mock_prompt_result):
     # TODO mock the prompt for each example separately
     outputs = PromptOutputs(
         result=mock_prompt_result,
@@ -356,11 +357,21 @@ def mock_prompt_action(mock_prompt_result):
         },
     )
 
+    # in case no model credentials are provided, mock that they exist
+    if await infer_default_llm() is None:
+        os.environ["OPENAI_API_KEY"] = "mock"
+        openai_mock = True
+    else:
+        openai_mock = False
+
     async def outputs_iter(*args, **kwargs):
         yield outputs
 
     with patch.object(Prompt, "run", new=outputs_iter):
         yield
+
+    if openai_mock:
+        del os.environ["OPENAI_API_KEY"]
 
 
 @pytest.fixture()

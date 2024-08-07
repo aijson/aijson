@@ -2,7 +2,7 @@ import pytest
 from pydantic.fields import FieldInfo
 
 from aijson import Field
-from aijson.actions.utils.prompt_context import ContextElement
+from aijson_ml.utils.prompt_context import ContextElement
 from aijson.utils.type_utils import build_field_description
 from aijson.models.config.model import ModelConfig
 import enum

@@ -1,0 +1,8 @@
+version: "0.1"
+
+flow:
+  hello_world:
+    action: llm
+    prompt:
+      - text: Can you say hello world for me?
+#default_output: hello_world.result

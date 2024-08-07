@@ -3,7 +3,7 @@ from unittest.mock import patch
 from aijson import Flow
 from aijson.utils.loader_utils import load_config_file
 
-from aijson.actions.llm import (
+from aijson_ml.actions.llm import (
     Outputs as PromptOutputs,
     Prompt,
     Inputs as PromptInputs,
@@ -11,7 +11,7 @@ from aijson.actions.llm import (
 
 
 async def test_default_model_var(log_history):
-    config = load_config_file("aijson/tests/resources/default_model_var.yaml")
+    config = load_config_file("aijson/tests/resources/default_model_var.ai.yaml")
     af = Flow(config=config).set_vars(
         some_model="hi",
     )

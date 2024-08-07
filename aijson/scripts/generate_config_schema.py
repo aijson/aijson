@@ -96,6 +96,7 @@ def _build_and_save_aijson_schema(
         strict=strict,
         config_filename=config_filename,
     )
+    os.makedirs("schemas", exist_ok=True)
     with open(os.path.join("schemas", output_file), "w") as f:
         json.dump(workflow_schema, f, indent=2)
 
@@ -132,20 +133,12 @@ if __name__ == "__main__":
         except Exception:
             pass
     else:
-        action_names = list(
-            get_actions_dict(
-                entrypoint_whitelist=["aijson"],
-            ).keys()
-        )
+        action_names = list(get_actions_dict().keys())
 
         # TODO assert tests not imported before this line
         import aijson.tests.resources.testing_actions  # noqa
 
-        testing_action_names = list(
-            get_actions_dict(
-                entrypoint_whitelist=["aijson"],
-            ).keys()
-        )
+        testing_action_names = list(get_actions_dict().keys())
 
         # build default action and test action schemas
         _build_and_save_aijson_schema(

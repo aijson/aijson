@@ -84,16 +84,20 @@ def build_hinted_action_config(
         strict=strict,
     )
 
+    actions = build_actions(
+        action_names=action_names,
+        vars_=vars_,
+        links=links,
+        include_paths=include_paths,
+        strict=strict,
+    )
+    if not actions:
+        raise RuntimeError(
+            "No actions found. Try installing some with `pip install aijson-meta`"
+        )
+
     ActionInvocationUnion = Union[
-        tuple(
-            build_actions(
-                action_names=action_names,
-                vars_=vars_,
-                links=links,
-                include_paths=include_paths,
-                strict=strict,
-            )
-        )  # pyright: ignore
+        tuple(actions)  # pyright: ignore
     ]
 
     class HintedLoop(Loop):
