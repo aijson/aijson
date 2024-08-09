@@ -189,10 +189,7 @@ class ActionService:
             if default_model is None:
                 log.error(
                     "Failed to guess what language model to use. "
-                    "Either specify `default_model` at the top of the config, "
-                    f"set {action_id}'s `model` input, "
-                    "provide an `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` environment variable, "
-                    "or run Ollama locally at `localhost:11434`."
+                    "For more info see: https://aijson.com/docs/guides/using_any_language_model/"
                 )
                 return
             log.info("Guessed what language model to use", model=default_model.model)
