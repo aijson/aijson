@@ -93,7 +93,7 @@ def build_hinted_action_config(
     )
     if not actions:
         raise RuntimeError(
-            "No actions found. Try installing some with `pip install aijson-meta`"
+            "No actions found. Install some with `pip install aijson-meta`"
         )
 
     ActionInvocationUnion = Union[
