@@ -23,4 +23,14 @@ async def infer_default_llm() -> ModelType | None:
     except Exception:
         pass
 
+    # Bedrock
+    if all(
+        get_secret(name)
+        for name in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+        )
+    ):
+        return "bedrock/meta.llama3-1-405b-instruct-v1:0"
+
     return None
