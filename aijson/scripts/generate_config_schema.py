@@ -14,7 +14,11 @@ from aijson.models.config.flow import (
 )
 from aijson.models.primitives import ExecutableId
 from aijson.utils.loader_utils import load_config_file
-from aijson.utils.action_utils import build_link_literal, get_actions_dict
+from aijson.utils.action_utils import (
+    build_link_literal,
+    get_actions_dict,
+    import_custom_actions,
+)
 
 
 def _get_action_invocations(
@@ -108,8 +112,16 @@ if __name__ == "__main__":
         default="",
         help="Path to flow for populating link fields with",
     )
+    parser.add_argument(
+        "--discover-actions",
+        default=False,
+        help="Recursively discover and import actions defined in the current working directory",
+    )
 
     args = parser.parse_args()
+
+    if args.discover_actions:
+        import_custom_actions(".")
 
     if args.flow:
         action_names = list(get_actions_dict().keys())

@@ -23,7 +23,7 @@ from aijson.log_config import get_logger, configure_logging
 from aijson.models.config.flow import Loop
 from aijson.repos.cache_repo import CacheRepo
 from aijson.scripts.serve_openai import find_open_port, create_server
-from aijson.utils.action_utils import get_actions_dict
+from aijson.utils.action_utils import get_actions_dict, import_custom_actions
 from aijson.utils.async_utils import merge_iterators
 from aijson.utils.format_utils import format_value
 from aijson.utils.gradio_utils import single_shot
@@ -690,6 +690,9 @@ def _show_action_exceptions_processor(
 
 
 if gr.NO_RELOAD:
+    # statically find and import actions recursively from current directory
+    import_custom_actions(".")
+
     configure_logging(
         additional_processors=[_show_action_exceptions_processor],
     )

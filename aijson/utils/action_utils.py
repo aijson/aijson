@@ -1,4 +1,9 @@
+import ast
+import importlib
+import importlib.util
 import inspect
+import os
+import sys
 import typing
 from typing import Any, Annotated, Literal, Union, Type
 
@@ -20,6 +25,7 @@ from aijson.models.config.value_declarations import (
 )
 from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
 from aijson.models.primitives import HintLiteral, ExecutableId, ExecutableName
+from aijson.utils.json_schema_utils import ModelNamer
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
     build_field_description,
@@ -493,6 +499,61 @@ def recursive_import(package_name):
 
 
 _processed_entrypoints = set()
+
+
+def file_contains_action_import(filepath: str):
+    if not filepath.endswith(".py"):
+        return False
+    with open(filepath) as f:
+        try:
+            tree = ast.parse(f.read())
+        except SyntaxError:
+            return False
+        for node in tree.body:
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.module is None:
+                continue
+            if "aijson" not in node.module:
+                continue
+            if any(
+                action_import in [n.name for n in node.names]
+                for action_import in (
+                    "register_action",
+                    "StreamingAction",
+                    "Action",
+                )
+            ):
+                return True
+    return False
+
+
+def import_custom_actions(path: str):
+    """
+    Recursively search for custom actions in the given path
+    The files are not imported, they are analyzed statically for
+    `register_action`, `StreamingAction` or `Action` imports.
+    """
+    # TODO needs a proper test
+    namer = ModelNamer("__aijson_actions_module")
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            filepath = os.path.join(root, file)
+            if not file_contains_action_import(filepath):
+                continue
+            module_name = namer.get()
+            spec = importlib.util.spec_from_file_location(module_name, filepath)
+            if spec is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            try:
+                sys.modules[module_name] = module
+                if spec.loader is None:
+                    continue
+                spec.loader.exec_module(module)
+            except Exception:
+                if module_name in sys.modules:
+                    del sys.modules[module_name]
 
 
 def get_actions_dict(
