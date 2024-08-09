@@ -60,6 +60,18 @@ ModelType = (
             description="Anthropic model; requires `ANTHROPIC_API_KEY` environment variable"
         ),
     ]
+    |
+    # bedrock models
+    Annotated[
+        Literal[
+            "bedrock/meta.llama3-1-405b-instruct-v1:0",
+            "bedrock/meta.llama3-1-70b-instruct-v1:0",
+            "bedrock/meta.llama3-1-8b-instruct-v1:0",
+        ],
+        Field(
+            description="Bedrock model; requires `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables"
+        ),
+    ]
     | str
 )
 
