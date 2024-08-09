@@ -112,6 +112,9 @@ example_vars = {
     "meeting_review": {
         "meeting_notes": "foo",
     },
+    "simple_list": {
+        "thing": "foo",
+    }
 }
 
 
