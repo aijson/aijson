@@ -12,4 +12,4 @@
 Low-Code Config Language for AI Pipelines
 </div>
 
-[pizzas_preview_demo.webm](https://github.com/user-attachments/assets/4fdb4cd1-7133-473c-9059-7bdd6cd23676)
+[demo.webm](https://github.com/user-attachments/assets/a20fedab-30e6-4459-9fe5-5c5a21a52c9f)
