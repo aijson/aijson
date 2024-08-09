@@ -12,14 +12,4 @@
 Low-Code Config Language for AI Pipelines
 </div>
 
-## Quickstart 
-
-1. Install the AI JSON python library 
-
-```bash
-pip install aijson-meta 
-```
-
-2. Install the AI JSON VSCode extension
-3. Copy one of the [example files](https://github.com/aijson/aijson/tree/main/examples) into your project
-4. Open it, and press `preview` in the top-right corner
+[pizzas_preview_demo.webm](https://github.com/user-attachments/assets/4fdb4cd1-7133-473c-9059-7bdd6cd23676)
