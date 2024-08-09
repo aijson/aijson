@@ -114,7 +114,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--discover-actions",
-        default=False,
+        action="store_true",
         help="Recursively discover and import actions defined in the current working directory",
     )
 
