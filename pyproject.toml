@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aijson-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Low-code config language for AI pipelines"
 authors = ["Rafael Irgolic <hello@irgolic.com>"]
 readme = "README.md"
