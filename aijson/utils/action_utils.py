@@ -507,7 +507,7 @@ def file_contains_action_import(filepath: str):
     with open(filepath) as f:
         try:
             tree = ast.parse(f.read())
-        except SyntaxError:
+        except Exception:
             return False
         for node in tree.body:
             if not isinstance(node, ast.ImportFrom):
