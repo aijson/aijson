@@ -6,7 +6,7 @@
 
 <h1>AI JSON / AI YAML</h1>
 
-[![discord](https://img.shields.io/badge/discord-7289da)](https://discord.gg/AGZ6GrcJCh)
+[![discord](https://img.shields.io/badge/discord-7289da)](https://discord.gg/8rVxacHn9H)
 [![docs](https://img.shields.io/badge/docs-orange)](https://aijson.com/docs)
 
 Low-Code Config Language for AI Pipelines
