@@ -1,4 +1,5 @@
 import os
+import re
 
 import yaml
 
@@ -18,6 +19,10 @@ def load_config_text(config_text: str) -> ActionConfig:
 def load_config_file(
     filename: str, config_model: type[ActionConfig] | None = None
 ) -> ActionConfig:
+    # LSP on windows passes in /c:/path/to/file.yaml paths, so we need to strip the leading /
+    if re.match(r"/[a-zA-Z]:/", filename):
+        filename = filename.lstrip("/")
+
     # when you run flows, you shouldn't run them with config_model=ActionConfig, else it won't know how to coerce fields
     # TODO load it non-strict before loading it for real, to show more informative errors (eg action is not installed)
     if not os.path.exists(filename):
