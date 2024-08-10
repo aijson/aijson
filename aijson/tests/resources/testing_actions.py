@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator, assert_never
+from typing_extensions import AsyncIterator, assert_never
 
 from aijson.models.config.action import (
     Action,
