@@ -82,7 +82,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.10', '3.11', '3.12' ]
-        pyright-version: [ 1.1.343 ]
+        pyright-version: [ 1.1.375 ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
