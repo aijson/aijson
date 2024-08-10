@@ -537,6 +537,9 @@ def import_custom_actions(path: str):
     # TODO needs a proper test
     namer = ModelNamer("__aijson_actions_module")
     for root, dirs, files in os.walk(path):
+        files = [f for f in files if not f[0] == '.']
+        # TODO find a smarter way to avoid importing whole venvs
+        dirs[:] = [d for d in dirs if not d[0] == '.' and "site-packages" not in dirs]
         for file in files:
             filepath = os.path.join(root, file)
             if not file_contains_action_import(filepath):
