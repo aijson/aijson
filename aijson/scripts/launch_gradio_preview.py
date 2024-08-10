@@ -35,6 +35,7 @@ from aijson.utils.static_utils import (
     get_config_variables,
     get_link_dependency_map,
 )
+from aijson.utils.subtype_utils import is_subtype
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -280,7 +281,7 @@ def _build_output_component(
     full_output_name: str,
 ):
     with gr.Row():
-        if annotation is not None and issubclass(annotation, str):
+        if annotation is not None and is_subtype(annotation, str):
             component = gr.Markdown(
                 show_label=False,
                 key=full_output_name,

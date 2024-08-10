@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from pydantic.fields import Field
 
 from aijson.models.config.action import Action, StreamingAction
+from aijson.utils.subtype_utils import is_subtype
 
 
 def _prepare_kwargs(inputs_model: BaseModel):
@@ -75,7 +76,7 @@ def _construct_decorator(
         elif inspect.isasyncgenfunction(func):
             # return typehint should be AsyncIterator or AsyncGenerator
             base = typing.get_origin(OutputsModel)
-            if issubclass(base, AsyncIterator):
+            if is_subtype(base, AsyncIterator):
                 # first arg should be YieldType
                 OutputsModel = typing.get_args(OutputsModel)[0]
             else:
