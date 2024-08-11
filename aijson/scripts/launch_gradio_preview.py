@@ -13,7 +13,7 @@ from enum import Enum
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Collection
+from typing import Collection, Any
 from unittest import mock
 
 from structlog.typing import EventDict
@@ -281,7 +281,13 @@ def _build_output_component(
     full_output_name: str,
 ):
     with gr.Row():
-        if annotation is not None and is_subtype(annotation, str):
+        if annotation is None or annotation is Any:
+            component = gr.Text(
+                show_label=False,
+                key=full_output_name,
+                container=False,
+            )
+        elif is_subtype(annotation, str):
             component = gr.Markdown(
                 show_label=False,
                 key=full_output_name,
