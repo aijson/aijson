@@ -127,6 +127,8 @@ def transform_and_templatify_type(
         name = None
         module = None
 
+    # TODO use remove_optional here?
+
     origin = typing.get_origin(type_)
     args = typing.get_args(type_)
     if origin is types.UnionType:

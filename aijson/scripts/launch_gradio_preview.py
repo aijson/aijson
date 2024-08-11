@@ -16,6 +16,7 @@ from tempfile import TemporaryDirectory
 from typing import Collection, Any
 from unittest import mock
 
+from pydantic import BaseModel
 from structlog.typing import EventDict
 
 from aijson import Flow, ShelveCacheRepo
@@ -36,6 +37,7 @@ from aijson.utils.static_utils import (
     get_link_dependency_map,
 )
 from aijson.utils.subtype_utils import is_subtype
+from aijson.utils.type_utils import remove_optional
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -274,6 +276,42 @@ def _construct_serve_openai_controls(
     # TODO export config button, once subflows are in
 
 
+def _get_output_component_for_type(
+    type_: type | None,
+    key: str,
+):
+    type_, _ = remove_optional(type_)
+
+    if type_ is None or type_ is Any:
+        component = gr.Text(
+            show_label=False,
+            key=key,
+            container=False,
+        )
+    elif is_subtype(type_, str):
+        component = gr.Markdown(
+            show_label=False,
+            key=key,
+            line_breaks=True,
+        )
+    elif (
+        is_subtype(type_, dict)
+        or is_subtype(type_, list)
+        or is_subtype(type_, BaseModel)
+    ):
+        component = gr.JSON(
+            show_label=False,
+            key=key,
+        )
+    else:
+        component = gr.Text(
+            show_label=False,
+            key=key,
+            container=False,
+        )
+    return component
+
+
 def _build_output_component(
     action_output_components: dict[str, Component],
     run_buttons: dict[str, gr.Button],
@@ -281,23 +319,9 @@ def _build_output_component(
     full_output_name: str,
 ):
     with gr.Row():
-        if annotation is None or annotation is Any:
-            component = gr.Text(
-                show_label=False,
-                key=full_output_name,
-                container=False,
-            )
-        elif is_subtype(annotation, str):
-            component = gr.Markdown(
-                show_label=False,
-                key=full_output_name,
-                line_breaks=True,
-            )
-        else:
-            component = gr.JSON(
-                show_label=False,
-                key=full_output_name,
-            )
+        component = _get_output_component_for_type(
+            type_=annotation, key=full_output_name
+        )
         action_output_components[full_output_name] = component
         with gr.Column(elem_classes=["my-compact-column"]):
             run_button = gr.Button(
