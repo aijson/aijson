@@ -13,10 +13,7 @@ files = [
 
 [package.dependencies]
 aijson-core = "*"
-aiosqlite = {version = ">=0.20.0,<0.21.0", optional = true, markers = "extra == \"sqlite\" or extra == \"all\""}
-asyncpg = {version = ">=0.29.0,<0.30.0", optional = true, markers = "extra == \"pg\" or extra == \"all\""}
 pandas = ">=2.2.2,<3.0.0"
-psycopg2 = {version = ">=2.9.9,<3.0.0", optional = true, markers = "extra == \"pg\" or extra == \"all\""}
 sqlalchemy = ">=2.0.30,<3.0.0"
 
 [package.extras]
@@ -26,31 +23,31 @@ sqlite = ["aiosqlite (>=0.20.0,<0.21.0)"]
 
 [[package]]
 name = "aijson-meta"
-version = "0.1.3"
+version = "0.1.6"
 description = "AI JSON Quickstart | Low-code config language for AI Pipelines"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_meta-0.1.3-py3-none-any.whl", hash = "sha256:6f7b9f0d62969b8e3dc42d0a20e6c3c99a537272cb04bf637d40cc1afb8c70af"},
-    {file = "aijson_meta-0.1.3.tar.gz", hash = "sha256:9722731f67c0c2e6b7a0728ada0f5246b75f07b1db93148cfed6511df90a5883"},
+    {file = "aijson_meta-0.1.6-py3-none-any.whl", hash = "sha256:ef63a72f9a232a13a04c120d3c240d2d48bba5edd4b1d2bcd70d9e20a04b62e0"},
+    {file = "aijson_meta-0.1.6.tar.gz", hash = "sha256:43053b0c758d8f58d3eea501bdcbd4521b92d22bb5f3f5c3859aea00e6da7a3a"},
 ]
 
 [package.dependencies]
-aijson-core = "*"
-aijson-db = {version = "*", extras = ["all"]}
-aijson-ml = {version = "*", extras = ["api"]}
-aijson-pdf = {version = "*", extras = ["all"]}
+aijson-core = ">=0.1.11"
+aijson-db = "*"
+aijson-ml = {version = ">=0.1.4", extras = ["api"]}
+aijson-pdf = "*"
 aijson-utils = "*"
 
 [[package]]
 name = "aijson-ml"
-version = "0.1.2"
+version = "0.1.4"
 description = "AI JSON Machine Learning Actions | LLMs, transformers"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_ml-0.1.2-py3-none-any.whl", hash = "sha256:6e52c6b88f4bb09fe1bd4f5e172670b91ce6baed3d5e4f533068c39359aac56c"},
-    {file = "aijson_ml-0.1.2.tar.gz", hash = "sha256:234025b23e5e09889becf79cfbb2deec4ff9ef01dcb64bc1fabca5f34d4c3e7e"},
+    {file = "aijson_ml-0.1.4-py3-none-any.whl", hash = "sha256:191c4b2ffb82fc9d0bc2fac053ca78868cb2d84620dd37650ca48014fc5c3424"},
+    {file = "aijson_ml-0.1.4.tar.gz", hash = "sha256:cddc3494fd5980ba9edc0400fd50de54e517ca271bbde116496c16fa4378b0e4"},
 ]
 
 [package.dependencies]
@@ -83,7 +80,6 @@ files = [
 
 [package.dependencies]
 aijson-core = "*"
-ocrmypdf = {version = ">=16.2.0,<17.0.0", optional = true, markers = "extra == \"ocr\" or extra == \"all\""}
 pypdfium2 = ">=4.24.0,<5.0.0"
 
 [package.extras]
@@ -405,7 +401,7 @@ files = [
 name = "asyncpg"
 version = "0.29.0"
 description = "An asyncio PostgreSQL driver"
-optional = false
+optional = true
 python-versions = ">=3.8.0"
 files = [
     {file = "asyncpg-0.29.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:72fd0ef9f00aeed37179c62282a3d14262dbbafb74ec0ba16e1b1864d8a12169"},
@@ -1174,7 +1170,7 @@ vision = ["Pillow (>=6.2.1)"]
 name = "deprecated"
 version = "1.2.14"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
-optional = false
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 files = [
     {file = "Deprecated-1.2.14-py2.py3-none-any.whl", hash = "sha256:6fac8b097794a90302bdbb17b9b815e732d3c4720583ff1b198499d78470466c"},
@@ -1191,7 +1187,7 @@ dev = ["PyTest", "PyTest-Cov", "bump2version (<1)", "sphinx (<2)", "tox"]
 name = "deprecation"
 version = "2.1.0"
 description = "A library to handle automated deprecations"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a"},
@@ -2384,7 +2380,7 @@ files = [
 name = "img2pdf"
 version = "0.5.1"
 description = "Convert images to PDF via direct JPEG inclusion."
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "img2pdf-0.5.1.tar.gz", hash = "sha256:73847e47242f4b5bd113c70049e03e03212936c2727cd2a8bf564229a67d0b95"},
@@ -2924,7 +2920,7 @@ proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "
 name = "lxml"
 version = "5.2.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
-optional = false
+optional = true
 python-versions = ">=3.6"
 files = [
     {file = "lxml-5.2.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:364d03207f3e603922d0d3932ef363d55bbf48e3647395765f9bfcbdf6d23632"},
@@ -3700,7 +3696,7 @@ files = [
 name = "ocrmypdf"
 version = "16.4.3"
 description = "OCRmyPDF adds an OCR text layer to scanned PDF files, allowing them to be searched"
-optional = false
+optional = true
 python-versions = ">=3.10"
 files = [
     {file = "ocrmypdf-16.4.3-py310-none-any.whl", hash = "sha256:dac502faeeefbb46be440c7f2e7941d25fd438443c087feda74528be72727a8e"},
@@ -4091,7 +4087,7 @@ files = [
 name = "pdfminer-six"
 version = "20240706"
 description = "PDF parser and analyzer"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "pdfminer.six-20240706-py3-none-any.whl", hash = "sha256:f4f70e74174b4b3542fcb8406a210b6e2e27cd0f0b5fd04534a8cc0d8951e38c"},
@@ -4111,7 +4107,7 @@ image = ["Pillow"]
 name = "pi-heif"
 version = "0.18.0"
 description = "Python interface for libheif library"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "pi_heif-0.18.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:3c09d22ed75200372b8102debf4ba69d8f63c595870505b9188d6c9a9b48e1f2"},
@@ -4179,7 +4175,7 @@ tests-min = ["defusedxml", "packaging", "pytest"]
 name = "pikepdf"
 version = "9.1.1"
 description = "Read and write PDFs with Python, powered by qpdf"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "pikepdf-9.1.1-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:dd468c44f89bd23b491867a9f08360c5d9ac971545522a20af67fc9d552bd4b8"},
@@ -4425,7 +4421,7 @@ files = [
 name = "psycopg2"
 version = "2.9.9"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "psycopg2-2.9.9-cp310-cp310-win32.whl", hash = "sha256:38a8dcc6856f569068b47de286b472b7c473ac7977243593a288ebce0dc89516"},
@@ -7750,4 +7746,4 @@ transformers = ["infinity-emb", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "d6c18566c94e0dc2cdd0b3dd7a58fd69c464195e8d306e36fbc4306a3ffc77b7"
+content-hash = "7bb5ecf1d413b0c34e8329d1b4b9e9481e9f83b4f355f123f6988110e7c7b1d9"
