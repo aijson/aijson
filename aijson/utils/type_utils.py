@@ -64,7 +64,9 @@ def templatify_fields(
             #         field_name in m.model_fields for m in typing.get_args(add_union)
             #     ):
             #         raise ValueError(f"{field_name} is a restricted field name.")
-            new_field_type = Union[new_field_type, add_union]
+            # if field type is dict-like, it swallos any add union typed dicts/models
+            # so we put add union first
+            new_field_type = Union[add_union, new_field_type]
 
         # keep original FieldInfo
         annotated_field_type = Annotated[new_field_type, field_]
