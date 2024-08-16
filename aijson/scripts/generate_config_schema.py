@@ -76,6 +76,7 @@ def _build_aijson_schema(
 
     if link_hint_literal is not None:
         definitions = workflow_schema["$defs"]
+        properties = workflow_schema["properties"]
         if link_hint_literal_name in definitions:
             raise ValueError(
                 f"Link hint literal name `{link_hint_literal_name}` already exists in definitions"
@@ -83,8 +84,8 @@ def _build_aijson_schema(
         definitions[link_hint_literal_name] = TypeAdapter(
             link_hint_literal
         ).json_schema()
-        links_any_of = TypeAdapter(link_hint_literal).json_schema()["anyOf"]
-        workflow_schema["properties"]["default_output"]["anyOf"] = links_any_of
+        links_any_of = TypeAdapter(link_hint_literal).json_schema()
+        properties["default_output"] = links_any_of
 
     return workflow_schema
 
