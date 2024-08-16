@@ -83,6 +83,8 @@ def _build_aijson_schema(
         definitions[link_hint_literal_name] = TypeAdapter(
             link_hint_literal
         ).json_schema()
+        links_any_of = TypeAdapter(link_hint_literal).json_schema()["anyOf"]
+        workflow_schema["properties"]["default_output"]["anyOf"] = links_any_of
 
     return workflow_schema
 
