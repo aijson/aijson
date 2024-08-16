@@ -1,5 +1,6 @@
 from typing import Union, Literal
 
+from gradio.themes import Default
 from pydantic import Field
 
 from aijson.models.config.action import (
@@ -107,8 +108,14 @@ def build_hinted_action_config(
         )
         flow: "HintedFlowConfig"  # type: ignore
 
+    if links is not None:
+        DefaultOutputType = links | None
+    else:
+        DefaultOutputType = ContextVarPath | None
+
     class HintedActionConfig(ActionConfig):
         flow: "HintedFlowConfig"  # type: ignore
+        default_output: DefaultOutputType = None  # type: ignore
 
     HintedExecutable = Union[ActionInvocationUnion, HintedLoop]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
