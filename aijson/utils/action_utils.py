@@ -485,15 +485,15 @@ def recursive_import(package_name):
 
     package = importlib.import_module(package_name)
     if not hasattr(package, "__path__"):
-        print(f"Package {package_name} has no __path__ attribute")
-        raise ImportError
+        return
     for _, module_name, is_pkg in pkgutil.walk_packages(
         package.__path__, package.__name__ + "."
     ):
         try:
-            importlib.import_module(module_name)
             if is_pkg:
                 recursive_import(module_name)
+            else:
+                importlib.import_module(module_name)
         except ImportError as e:
             print(f"Failed to import {module_name}: {e}")
 
