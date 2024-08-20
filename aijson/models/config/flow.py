@@ -1,6 +1,5 @@
 from typing import Union, Literal
 
-from gradio.themes import Default
 from pydantic import Field
 
 from aijson.models.config.action import (
@@ -97,9 +96,7 @@ def build_hinted_action_config(
             "No actions found. Install some with `pip install aijson-meta`"
         )
 
-    ActionInvocationUnion = Union[
-        tuple(actions)  # pyright: ignore
-    ]
+    ActionInvocationUnion = Union[tuple(actions)]  # pyright: ignore
 
     class HintedLoop(Loop):
         in_: HintedValueDeclaration = Field(  # type: ignore
