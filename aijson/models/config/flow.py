@@ -96,9 +96,7 @@ def build_hinted_action_config(
             "No actions found. Install some with `pip install aijson-meta`"
         )
 
-    ActionInvocationUnion = Union[
-        tuple(actions)  # pyright: ignore
-    ]
+    ActionInvocationUnion = Union[tuple(actions)]  # pyright: ignore
 
     class HintedLoop(Loop):
         in_: HintedValueDeclaration = Field(  # type: ignore
@@ -107,8 +105,14 @@ def build_hinted_action_config(
         )
         flow: "HintedFlowConfig"  # type: ignore
 
+    if links is not None:
+        DefaultOutputType = links | None
+    else:
+        DefaultOutputType = ContextVarPath | None
+
     class HintedActionConfig(ActionConfig):
         flow: "HintedFlowConfig"  # type: ignore
+        default_output: DefaultOutputType = None  # type: ignore
 
     HintedExecutable = Union[ActionInvocationUnion, HintedLoop]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
