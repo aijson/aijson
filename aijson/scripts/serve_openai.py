@@ -149,6 +149,9 @@ async def run_server(
     host: str = "0.0.0.0",
     port: int | None = None,
 ):
+    if port is None:
+        port = find_open_port()
+
     server = await create_server(
         flow=flow,
         input_var_name=input_var_name,
