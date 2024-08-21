@@ -401,7 +401,7 @@ async def test_prompt_inputs(log, in_memory_action_service, log_history):
     try:
         os.environ["OPENAI_API_KEY"] = "mock"
         outputs = await in_memory_action_service.run_action(
-            log=log, action_id=action_id
+            log=log, action_id=action_id, variables={"inferred_var": "myvar"}
         )
     finally:
         if openai_api_key_bak is not None:
@@ -409,7 +409,7 @@ async def test_prompt_inputs(log, in_memory_action_service, log_history):
         else:
             del os.environ["OPENAI_API_KEY"]
 
-    assert len(outputs.prompt) == 6
+    assert len(outputs.prompt) == 7
     assert isinstance(outputs.prompt[0], RoleElement)
     assert outputs.prompt[0].role == "system"
     assert isinstance(outputs.prompt[1], TextElement)
@@ -424,6 +424,9 @@ async def test_prompt_inputs(log, in_memory_action_service, log_history):
     assert outputs.prompt[4].value == "3"
     assert isinstance(outputs.prompt[5], TextElement)
     assert outputs.prompt[5].text == "3"
+    assert isinstance(outputs.prompt[6], ContextElement)
+    assert outputs.prompt[6].value == "myvar"
+    assert outputs.prompt[6].heading == "Inferred Var"
     # assert outputs.prompt.context.root[0].value == "7"
     # assert outputs.prompt.context.root[0].heading == "Test"
     # assert outputs.instructions.value == "Hi 3"

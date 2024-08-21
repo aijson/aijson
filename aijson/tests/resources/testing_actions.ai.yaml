@@ -104,6 +104,7 @@ flow:
         heading: abc
       - text: |
           {{ first_sum.result }}
+      - var: inferred_var
 
   range_stream:
     action: test_range_stream
