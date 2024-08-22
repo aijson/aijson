@@ -180,6 +180,7 @@ class Flow:
             raise NotImplementedError("Only one dependency is supported for now")
         executable_id = list(dependencies)[0]
 
+        result = jinja2.Undefined()
         async for outputs in self.action_service.stream_executable(
             self.log,
             executable_id=executable_id,
@@ -191,5 +192,7 @@ class Flow:
 
             result = await declaration.render(context)
             if isinstance(result, jinja2.Undefined):
-                raise RuntimeError("Failed to render result")
+                continue
             yield result
+        if isinstance(result, jinja2.Undefined):
+            raise RuntimeError("Failed to render result")
