@@ -23,14 +23,14 @@ def get_redis_username() -> str | None:
 def get_redis_url() -> str:
     host = get_secret("REDIS_HOST")
     if host is None:
-        raise ValueError("REDIS_HOST is not set")
+        host = "localhost"
     port = get_redis_port()
     username = get_redis_username()
     if username is None:
         username = ""
     password = get_secret("REDIS_PASSWORD")
     if password is None:
-        raise ValueError("REDIS_PASSWORD is not set")
+        password = ""
 
     return f"redis://{username}:{password}@{host}:{port}"
 
@@ -38,12 +38,12 @@ def get_redis_url() -> str:
 def load_aioredis():
     host = get_secret("REDIS_HOST")
     if host is None:
-        raise ValueError("REDIS_HOST is not set")
+        host = "localhost"
     port = get_redis_port()
     username = get_redis_username()
     password = get_secret("REDIS_PASSWORD")
     if password is None:
-        raise ValueError("REDIS_PASSWORD is not set")
+        password = ""
     return aioredis.Redis(
         host=host,
         port=port,
