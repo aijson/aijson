@@ -10,7 +10,7 @@ from aijson.services.action_service import ActionService
 from aijson.log_config import get_logger
 from aijson.models.config.value_declarations import VarDeclaration
 from aijson.repos.blob_repo import InMemoryBlobRepo, BlobRepo
-from aijson.repos.cache_repo import ShelveCacheRepo, CacheRepo
+from aijson.repos.cache_repo import ShelveCacheRepo, CacheRepo, asyncio
 from aijson.utils.loader_utils import load_config_file, load_config_text
 from aijson.utils.static_utils import check_config_consistency
 
@@ -104,6 +104,13 @@ class Flow:
             temp_dir=self.temp_dir,
             _vars=variables,
         )
+
+    async def run_all(self) -> Any:
+        target_output = list(self.action_config.flow.keys())
+        flows = []
+        for i in target_output:
+            flows.append(self.run(i))
+        await asyncio.gather(*flows)
 
     async def run(self, target_output: None | str = None) -> Any:
         """
