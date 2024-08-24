@@ -370,6 +370,9 @@ class ActionService:
         flow: FlowConfig | None = None,
         task_prefix: str = "",
     ) -> AsyncIterator[dict[ExecutableId, Outputs] | SentinelType]:
+        """
+        Sentinel yield means error has occured
+        """
         if flow is None:
             flow = self.config.flow
         executable_dependencies = {d for d in dependencies if d[0] in flow}
@@ -522,6 +525,15 @@ class ActionService:
                 iter_ = self.stream_loop(
                     log=log,
                     loop_id=id_,
+                    variables=variables,
+                    partial=stream,
+                    flow=flow,
+                    task_prefix=task_prefix,
+                )
+            elif isinstance(executable, ValueDeclaration):
+                iter_ = self.stream_value_declaration(
+                    log=log,
+                    value_declaration_id=id_,
                     variables=variables,
                     partial=stream,
                     flow=flow,
@@ -1005,6 +1017,59 @@ class ActionService:
             combined_results.append(indexed_results[i])
         yield combined_results
 
+    async def stream_value_declaration(
+        self,
+        log: structlog.stdlib.BoundLogger,
+        value_declaration_id: ExecutableId,
+        variables: dict[str, Any] | None = None,
+        partial: bool = False,
+        flow: FlowConfig | None = None,
+        task_prefix: str = "",
+    ):
+        if variables is None:
+            variables = {}
+        if flow is None:
+            flow = self.config.flow
+
+        if "action_id" in log._context:
+            downstream_action_id = log._context["action_id"]
+            log = log.unbind("action_id").bind(
+                downstream_action_id=downstream_action_id
+            )
+        if "action_name" in log._context:
+            log = log.unbind("action_name")
+        log = log.bind(action_id=value_declaration_id)
+
+        declaration = flow[value_declaration_id]
+        if not isinstance(declaration, ValueDeclaration):
+            log.error(
+                "Not a value declaration", value_declaration_id=value_declaration_id
+            )
+            raise RuntimeError("Not a value declaration")
+
+        # Get the dependencies of the variable
+        dependencies = self._get_dependency_ids_and_stream_flag_from_input_spec(
+            declaration
+        )
+        dependency_outputs = None
+        async for dependency_outputs in self.stream_dependencies(
+            log,
+            dependencies,
+            variables,
+            flow=flow,
+            task_prefix=task_prefix,
+        ):
+            if is_sentinel(dependency_outputs):
+                return
+            if partial:
+                context = dependency_outputs | variables
+                log.debug("Rendering value declaration", partial=True)
+                yield await declaration.render(context)
+        if not partial or dependency_outputs is None:
+            context = (dependency_outputs or {}) | variables
+            log.debug("Rendering value declaration", partial=False)
+            yield await declaration.render(context)
+
     async def stream_action(
         self,
         log: structlog.stdlib.BoundLogger,
@@ -1162,6 +1227,15 @@ class ActionService:
             else:
                 yield result
             return
+        elif isinstance(executable, ValueDeclaration):
+            async for outputs in self.stream_value_declaration(
+                log=log,
+                value_declaration_id=executable_id,
+                variables=variables,
+                partial=partial,
+                flow=flow,
+            ):
+                yield outputs
         else:
             assert_never(executable)
 
@@ -1198,5 +1272,20 @@ class ActionService:
         return await iterator_to_coro(
             self.stream_loop(
                 log=log, loop_id=loop_id, variables=variables, partial=False
+            )
+        )
+
+    async def run_value_declaration(
+        self,
+        log: structlog.stdlib.BoundLogger,
+        value_declaration_id: ExecutableId,
+        variables: None | dict[str, Any] = None,
+    ) -> list[Outputs] | None:
+        return await iterator_to_coro(
+            self.stream_value_declaration(
+                log=log,
+                value_declaration_id=value_declaration_id,
+                variables=variables,
+                partial=False,
             )
         )

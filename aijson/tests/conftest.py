@@ -42,7 +42,10 @@ _log_history = []
 
 
 def capture_processor(logger, method_name, event_dict):
-    if method_name == "debug" and event_dict["event"] != "Yielding outputs":
+    if method_name == "debug" and event_dict["event"] not in [
+        "Yielding outputs",
+        "Rendering value declaration",
+    ]:
         return event_dict
     dict_copy = event_dict.copy()
     dict_copy["log_level"] = method_name
