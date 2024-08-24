@@ -1,11 +1,14 @@
 import os
+from typing import Sequence
+
+from gradio.blocks import Block
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 import gradio as gr  # noqa: E402
 
 
-def single_shot(fn, inputs, outputs):
+def single_shot(fn, inputs, outputs: Block | Sequence[Block]):
     # lower values make the event trigger more times
     # while lagging even with 0.1 it might trigger multiple times
     timer = gr.Timer(0.1)
@@ -25,8 +28,10 @@ def single_shot(fn, inputs, outputs):
         outputs += [timer]
     elif isinstance(outputs, set):
         outputs.add(timer)
-    else:
+    elif not isinstance(outputs, Sequence):
         outputs = [outputs, timer]
+    else:
+        raise RuntimeError(f"Unsupported outputs type: {type(outputs)}")
     timer.tick(_, inputs, outputs)
 
     return timer
