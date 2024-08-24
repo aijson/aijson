@@ -1,3 +1,4 @@
+from aijson.models.config.value_declarations import ValueDeclaration
 from typing_extensions import Any, assert_never
 
 import structlog
@@ -57,14 +58,8 @@ def check_flow_consistency(
             dependency_path=f"{log._context['dependency_path']}.{executable_id}"
         )
         invocation = flow[executable_id]
-        if isinstance(invocation, Loop):
-            if not check_loop_consistency(log, flow, invocation, variables):
-                pass_ = False
-        elif isinstance(invocation, ActionInvocation):
-            if not check_action_consistency(log, flow, invocation, variables):
-                pass_ = False
-        else:
-            assert_never(invocation)
+        if not check_invocation_consistency(log, flow, invocation, variables):
+            pass_ = False
 
     return pass_
 
@@ -107,7 +102,7 @@ def check_loop_consistency(
 def check_action_consistency(
     log: structlog.stdlib.BoundLogger,
     flow: FlowConfig,
-    invocation: ActionInvocation,
+    invocation: ActionInvocation | ValueDeclaration,
     variables: set[str],
 ):
     dependencies = _get_root_dependencies(invocation)
@@ -138,6 +133,8 @@ def check_invocation_consistency(
     if isinstance(invocation, Loop):
         return check_loop_consistency(log, flow, invocation, variables)
     elif isinstance(invocation, ActionInvocation):
+        return check_action_consistency(log, flow, invocation, variables)
+    elif isinstance(invocation, ValueDeclaration):
         return check_action_consistency(log, flow, invocation, variables)
     else:
         assert_never(invocation)
@@ -181,7 +178,7 @@ def get_invocation_dependencies(
             for dep in get_flow_dependencies(invocation.flow)
             if dep != invocation.for_
         }
-    elif isinstance(invocation, ActionInvocation):
+    elif isinstance(invocation, (ActionInvocation, ValueDeclaration)):
         return set(_get_root_dependencies(invocation))
     else:
         assert_never(invocation)
@@ -256,9 +253,15 @@ def get_target_outputs(config: ActionConfig):
         # TODO handle loop
         if isinstance(action_invocation, Loop):
             continue
+        elif isinstance(action_invocation, ActionInvocation):
+            action = actions_dict[action_invocation.action]
+            outputs_type = action._get_outputs_type(action_invocation)
+        elif isinstance(action_invocation, ValueDeclaration):
+            # TODO is this right
+            outputs_type = Any
+        else:
+            assert_never(action_invocation)
         legal_target_outputs.append(action_id)
-        action = actions_dict[action_invocation.action]
-        outputs_type = action._get_outputs_type(action_invocation)
         if not is_basemodel_subtype(outputs_type):
             continue
         for output_name, output_field in outputs_type.model_fields.items():

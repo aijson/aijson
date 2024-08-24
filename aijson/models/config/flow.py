@@ -67,7 +67,7 @@ class ActionConfig(StrictModel):
         return list(self.flow.keys())[-1]
 
 
-Executable = Union[ActionInvocation, Loop]
+Executable = Union[ActionInvocation, Loop, ValueDeclaration]
 FlowConfig = dict[ExecutableId, Executable]
 
 
@@ -114,7 +114,7 @@ def build_hinted_action_config(
         flow: "HintedFlowConfig"  # type: ignore
         default_output: DefaultOutputType = None  # type: ignore
 
-    HintedExecutable = Union[ActionInvocationUnion, HintedLoop]
+    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, HintedValueDeclaration]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
 
     HintedActionConfig.model_rebuild()  # TODO is this necessary?

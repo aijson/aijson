@@ -17,7 +17,7 @@ from aijson.models.blob import Blob
 def assert_logs(
     log_list: list[dict],
     action_id: str,
-    action_name: str,
+    action_name: str | None = None,
     exception: bool = False,
     action_execution: bool = True,
     assert_empty: bool = True,
@@ -32,6 +32,7 @@ def assert_logs(
     uncacheable_warning: bool = False,
     no_output: bool = False,
     guessed_llm: bool = False,
+    value_declaration_render: bool = False,
 ):
     # ignore some logs
     # log_list[:] = [
@@ -43,6 +44,23 @@ def assert_logs(
     #     # ]
     #     and log_dict["log_level"] != "debug"
     # ]
+
+    if value_declaration_render:
+        if partial_yields > 0:
+            for _ in range(partial_yields):
+                log_dict = log_list.pop(0)
+                assert log_dict["event"] == "Rendering value declaration"
+                assert log_dict["partial"]
+                assert log_dict["action_id"] == action_id
+                assert log_dict["log_level"] == "debug"
+        else:
+            log_dict = log_list.pop(0)
+            assert log_dict["event"] == "Rendering value declaration"
+            assert not log_dict["partial"]
+            assert log_dict["action_id"] == action_id
+            assert log_dict["log_level"] == "debug"
+        # TODO assert empty
+        return
 
     if final_invocation_flag:
         log_dict = log_list.pop(0)
@@ -1047,6 +1065,71 @@ async def test_async_generator_func(log, in_memory_action_service, log_history):
     assert_logs(log_history, action_id, action_name, partial_yields=3)
 
 
+async def test_bare_var(log, in_memory_action_service, log_history):
+    variables = {
+        "my_bare_var": 1,
+    }
+    action_id = "bare_var"
+
+    outputs = await in_memory_action_service.run_value_declaration(
+        log=log, value_declaration_id=action_id, variables=variables
+    )
+    assert outputs == 1
+
+    assert_logs(log_history, action_id, value_declaration_render=True)
+
+
+async def test_bare_link(log, in_memory_action_service, log_history):
+    action_id = "first_sum"
+    action_name = "test_add"
+    value_id = "bare_link"
+
+    outputs = await in_memory_action_service.run_value_declaration(
+        log=log,
+        value_declaration_id=value_id,
+    )
+    assert outputs == 3
+
+    assert_logs(log_history, action_id, action_name, assert_empty=False)
+    assert_logs(log_history, value_id, value_declaration_render=True)
+
+
+async def test_bare_lambda(log, in_memory_action_service, log_history):
+    action_id = "first_sum"
+    action_name = "test_add"
+    value_id = "bare_lambda"
+
+    outputs = await in_memory_action_service.run_value_declaration(
+        log=log,
+        value_declaration_id=value_id,
+    )
+    assert outputs == 3
+
+    assert_logs(log_history, action_id, action_name, assert_empty=False)
+    assert_logs(log_history, value_id, value_declaration_render=True)
+
+
+async def test_bare_input_sum(log, in_memory_action_service, log_history):
+    variables = {
+        "my_bare_var": 2,
+    }
+
+    action_id = "bare_input_sum"
+    action_name = "test_add"
+    value_id = "bare_var"
+
+    outputs = await in_memory_action_service.run_action(
+        log=log,
+        action_id=action_id,
+        variables=variables,
+    )
+    assert outputs.result == 3
+
+    assert_logs(log_history, value_id, value_declaration_render=True)
+    assert_logs(log_history, action_id, action_name)
+
+
+# TODO test streaming value declarations
 # TODO test that `new_listeners` are all delivered the latest output when starting to listen while action is caching
 # TODO test exception throwing through dependencies
 # TODO test multiple interleaving streaming actions
