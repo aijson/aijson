@@ -66,8 +66,9 @@ import pydantic
             """,
             pydantic.create_model(
                 "Model0",
+                # both properties are set as required
                 id=(int, ...),
-                name=(str, None),
+                name=(str, ...),
             ),
         ),
         (

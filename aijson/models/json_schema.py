@@ -153,7 +153,7 @@ class JsonSchemaObject(BaseModel):
     multipleOf: Optional[float] = None
     exclusiveMaximum: Union[float, bool, None] = None
     exclusiveMinimum: Union[float, bool, None] = None
-    # additionalProperties: Union[JsonSchemaObject, bool, None] = None
+    additionalProperties: Literal[False] = False
     # patternProperties: Optional[Dict[str, JsonSchemaObject]] = None
     oneOf: List[JsonSchemaObject] = []
     anyOf: List[JsonSchemaObject] = []
@@ -164,7 +164,7 @@ class JsonSchemaObject(BaseModel):
     properties: Optional[Dict[str, JsonSchemaObject]] = None
     required: List[str] | None = Field(
         default=None,
-        description="List of required properties. Defaults to all properties.",
+        description="Do not set, is overriden to all properties.",
     )
     ref: Optional[str] = Field(default=None, alias="$ref")
     nullable: Optional[bool] = False
@@ -201,6 +201,11 @@ class JsonSchemaObject(BaseModel):
         # this condition expects empty dict
         return values or None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.additionalProperties = False
+        self.required = list(self.properties or [])
+
     # def has_default(self) -> bool:
     #     return "default" in self.__fields_set__ or "default_factory" in self.extras
 
@@ -214,6 +219,16 @@ class JsonSchemaObject(BaseModel):
 
     def type_has_null(self) -> bool:
         return isinstance(self.type, list) and "null" in self.type
+
+    def model_dump_json(
+        self,
+        *args,
+        **kwargs,
+    ) -> str:
+        return super().model_dump_json(
+            *args,
+            **kwargs,
+        )
 
 
 @lru_cache()
