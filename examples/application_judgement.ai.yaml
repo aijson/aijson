@@ -19,6 +19,8 @@ flow:
             You only have the ability to fund 5 companies and will be presented with over 200 applications.
             Be careful, wasting your funding opportunities on the wrong companies could lead to bankruptcy and you have a family at home to take care of.
             Provide a detailed score based accounting of the strengths and weaknesses.
+            Do not simply list pros and cons; list some criteria, and then score against each.
+            Only score AFTER the strengths and weaknesses.
         - heading: application
           var: application
   suggestions: 
