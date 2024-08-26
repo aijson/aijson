@@ -1,4 +1,7 @@
 version: "0.1"
+default_model:
+  model:
+    var: some_model
 flow: 
     add_two:
         action: llm

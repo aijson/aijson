@@ -49,7 +49,7 @@ async def test_run_all(log_history):
 
     config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
     question = "1 + "
-    flow = Flow(config).set_vars(question=question)
+    flow = Flow(config).set_vars(question=question, some_model="hi")
 
     expected_outputs = ["3", "4", "5"]
     outputs = await flow.run_all()
