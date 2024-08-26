@@ -3,6 +3,7 @@ import json
 import os
 
 import pydantic
+from aijson.models.config.value_declarations import ValueDeclaration
 from pydantic import TypeAdapter
 
 from aijson.log_config import get_logger
@@ -38,7 +39,7 @@ def _get_action_invocations(
     action_invocations = {}
     # actions = get_actions_dict()
     for action_id, action_invocation in action_config.flow.items():
-        if isinstance(action_invocation, Loop):
+        if isinstance(action_invocation, (Loop, ValueDeclaration)):
             # TODO support for loops in link fields
             continue
         action_invocations[action_id] = action_invocation
