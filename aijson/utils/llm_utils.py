@@ -7,7 +7,7 @@ from aijson.utils.secret_utils import get_secret
 async def infer_default_llm() -> ModelType | None:
     # OpenAI
     if get_secret("OPENAI_API_KEY"):
-        return "gpt-4o"
+        return "gpt-4o-2024-08-06"
 
     # Anthropic
     if get_secret("ANTHROPIC_API_KEY"):
