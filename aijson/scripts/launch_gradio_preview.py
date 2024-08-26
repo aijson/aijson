@@ -14,8 +14,11 @@ from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Collection, Any
+from typing_extensions import assert_never
 from unittest import mock
 
+from aijson.models.config.action import ActionInvocation
+from aijson.models.config.value_declarations import ValueDeclaration
 from pydantic import BaseModel
 from structlog.typing import EventDict
 
@@ -389,8 +392,14 @@ def construct_gradio_app(log, variables: set[str], flow: Flow):
             # TODO handle loop
             if isinstance(action_invocation, Loop):
                 continue
-            action = actions_dict[action_invocation.action]
-            outputs_type = action._get_outputs_type(action_invocation)
+            elif isinstance(action_invocation, ValueDeclaration):
+                # TODO is this right
+                outputs_type = str
+            elif isinstance(action_invocation, ActionInvocation):
+                action = actions_dict[action_invocation.action]
+                outputs_type = action._get_outputs_type(action_invocation)
+            else:
+                assert_never(action_invocation)
             with gr.Accordion(
                 action_id,
                 elem_classes=[

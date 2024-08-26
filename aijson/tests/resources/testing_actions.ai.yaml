@@ -291,4 +291,16 @@ flow:
     a: 1
     b: 2
 
+  bare_var:
+    var: my_bare_var
+  bare_link:
+    link: first_sum.result
+  bare_lambda:
+    lambda: first_sum.result
+  bare_input_sum:
+    action: test_add
+    a: 1
+    b:
+      link: bare_var
+
 default_output: first_sum.result
