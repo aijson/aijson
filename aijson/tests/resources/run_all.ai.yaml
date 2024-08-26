@@ -1,20 +1,15 @@
+
 version: "0.1"
-default_model:
-  model:
-    var: some_model
 flow: 
     add_two:
-        action: llm
-        prompt:
-            text: |
-                {{ question }} 2 ?
+        action: test_add
+        a: 1
+        b: 2
     add_three:
-        action: llm
-        prompt:
-            text: |
-                {{ question }} 3 ?
+        action: test_add
+        a: 1
+        b: 3
     add_four:
-        action: llm
-        prompt: 
-            text: |
-                {{ question }} 4 ?
+        action: test_add
+        a: 1
+        b: 4
