@@ -54,9 +54,6 @@ async def test_run_all(log_history):
     expected_outputs = ["3", "4", "5"]
     outputs = await flow.run_all()
     for index, output in enumerate(outputs):
-        try:
-            expected = expected_outputs[index]
-            assert expected in output
-        except IndexError:
-            assert False
+        expected = expected_outputs[index]
+        assert expected in output
     assert all(log_["log_level"] != "error" for log_ in log_history)
