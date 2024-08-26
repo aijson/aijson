@@ -39,7 +39,7 @@ async def test_default_model_var(log_history):
     # assert_logs(log_history, action_id, "test_add")
 
 
-async def test_run_all():
+async def test_run_all(log_history):
     # import logging
     # from aijson.log_config import configure_logging
     # from dotenv import load_dotenv
@@ -59,3 +59,4 @@ async def test_run_all():
             assert expected in output
         except IndexError:
             assert False
+    assert all(log_["log_level"] != "error" for log_ in log_history)
