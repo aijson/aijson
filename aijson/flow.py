@@ -105,12 +105,13 @@ class Flow:
             _vars=variables,
         )
 
-    async def run_all(self) -> Any:
+    async def run_all(self) -> list[Any]:
         target_output = list(self.action_config.flow.keys())
         flows = []
         for i in target_output:
             flows.append(self.run(i))
-        await asyncio.gather(*flows)
+        output = await asyncio.gather(*flows)
+        return output
 
     async def run(self, target_output: None | str = None) -> Any:
         """

@@ -37,3 +37,25 @@ async def test_default_model_var(log_history):
     # outputs = await action_service.run_action(log=log, action_id=action_id)
 
     # assert_logs(log_history, action_id, "test_add")
+
+
+async def test_run_all():
+    # import logging
+    # from aijson.log_config import configure_logging
+    # from dotenv import load_dotenv
+
+    # load_dotenv()
+    # configure_logging(pretty=False, level=logging.INFO)
+
+    config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
+    question = "1 + "
+    flow = Flow(config).set_vars(question=question)
+
+    expected_outputs = ["3", "4", "5"]
+    outputs = await flow.run_all()
+    for index, output in enumerate(outputs):
+        try:
+            expected = expected_outputs[index]
+            assert expected in output
+        except IndexError:
+            assert False
