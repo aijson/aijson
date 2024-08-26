@@ -13,7 +13,8 @@ from enum import Enum
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Collection, Any, assert_never
+from typing import Collection, Any
+from typing_extensions import assert_never
 from unittest import mock
 
 from aijson.models.config.action import ActionInvocation
