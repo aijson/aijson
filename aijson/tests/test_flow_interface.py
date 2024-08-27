@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 from aijson import Flow
-from aijson.tests.resources.testing_actions import AddOutputs
 from aijson.tests.test_action_service import assert_logs
 from aijson.utils.loader_utils import load_config_file
 
@@ -42,7 +41,6 @@ async def test_default_model_var(log_history):
 
 
 async def test_run_all(log_history):
-
     config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
     flow = Flow(config)
     expected_outputs = [3, 4, 5]
