@@ -55,3 +55,22 @@ async def test_run_all(log_history):
     assert_logs(log_history, "add_two", action_name, assert_empty=False)
     assert_logs(log_history, "add_three", action_name, assert_empty=False)
     assert_logs(log_history, "add_four", action_name)
+
+
+async def test_stream_all(log_history):
+    config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
+    flow = Flow(config)
+    outputs = flow.stream_all()
+
+    expected_outputs = [3, 4, 5]
+    outputs = await flow.run_all()
+
+    assert len(outputs) == 3
+
+    for output, expected in zip(outputs, expected_outputs):
+        assert output.result == expected
+
+    action_name = "test_add"
+    assert_logs(log_history, "add_two", action_name, assert_empty=False)
+    assert_logs(log_history, "add_three", action_name, assert_empty=False)
+    assert_logs(log_history, "add_four", action_name)
