@@ -108,12 +108,10 @@ class Flow:
         )
 
     async def run_all(self) -> list[Any]:
-        action_keys = list(self.action_config.flow.keys())
-        flows = []
-        for action in action_keys:
-            flows.append(self.run(action))
-        output = await asyncio.gather(*flows)
-        return output
+        action_ids = list(self.action_config.flow)
+        flows = [self.run(action_id) for action_id in action_ids]
+        outputs = await asyncio.gather(*flows)
+        return outputs
 
     async def run(self, target_output: None | str = None) -> Any:
         """
@@ -161,14 +159,12 @@ class Flow:
         return result
 
     async def stream_all(self) -> AsyncIterator[dict[ExecutableId, Any]]:
-        action_keys = list(self.action_config.flow.keys())
-        iterators = []
-        for action in action_keys:
-            stream_output = self.stream(action)
-            iterators.append(stream_output)
-        async for output in merge_iterators(self.log, action_keys, iterators):
-            if isinstance(output[0], str):
-                yield {f"{output[0]}": output[1]}
+        action_ids = list(self.action_config.flow)
+        iterators = [self.stream(action_id) for action_id in action_ids]
+        outputs = {}
+        async for action_id, output in merge_iterators(self.log, action_ids, iterators):
+            outputs[action_id] = output
+            yield outputs
 
     async def stream(self, target_output: None | str = None) -> AsyncIterator[Any]:
         """
