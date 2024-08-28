@@ -10,9 +10,11 @@ from aijson.services.action_service import ActionService
 from aijson.log_config import get_logger
 from aijson.models.config.value_declarations import VarDeclaration
 from aijson.repos.blob_repo import InMemoryBlobRepo, BlobRepo
-from aijson.repos.cache_repo import ShelveCacheRepo, CacheRepo
+from aijson.repos.cache_repo import ShelveCacheRepo, CacheRepo, asyncio
+from aijson.utils.async_utils import merge_iterators
 from aijson.utils.loader_utils import load_config_file, load_config_text
 from aijson.utils.static_utils import check_config_consistency
+from aijson.models.primitives import ExecutableId
 
 
 class Flow:
@@ -105,6 +107,12 @@ class Flow:
             _vars=variables,
         )
 
+    async def run_all(self) -> list[Any]:
+        action_ids = list(self.action_config.flow)
+        flows = [self.run(action_id) for action_id in action_ids]
+        outputs = await asyncio.gather(*flows)
+        return outputs
+
     async def run(self, target_output: None | str = None) -> Any:
         """
         Run the subset of the flow required to get the target output.
@@ -149,6 +157,14 @@ class Flow:
         if isinstance(result, jinja2.Undefined):
             raise RuntimeError("Failed to render result")
         return result
+
+    async def stream_all(self) -> AsyncIterator[dict[ExecutableId, Any]]:
+        action_ids = list(self.action_config.flow)
+        iterators = [self.stream(action_id) for action_id in action_ids]
+        outputs = {}
+        async for action_id, output in merge_iterators(self.log, action_ids, iterators):
+            outputs[action_id] = output
+            yield outputs
 
     async def stream(self, target_output: None | str = None) -> AsyncIterator[Any]:
         """

@@ -1,0 +1,15 @@
+
+version: "0.1"
+flow: 
+    add_two:
+        action: test_add
+        a: 1
+        b: 2
+    add_three:
+        action: test_add
+        a: 1
+        b: 3
+    add_four:
+        action: test_add
+        a: 1
+        b: 4
