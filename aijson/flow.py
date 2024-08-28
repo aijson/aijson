@@ -162,18 +162,13 @@ class Flow:
 
     async def stream_all(self) -> AsyncIterator[dict[ExecutableId, Any]]:
         action_keys = list(self.action_config.flow.keys())
-        actions = {}
         iterators = []
-        stream_ids: dict[int, str] = {}
-        for i, action in enumerate(action_keys):
+        for action in action_keys:
             stream_output = self.stream(action)
             iterators.append(stream_output)
-            actions[action] = []
-            stream_ids[i] = action
-        async for output in merge_iterators(self.log, range(len(iterators)), iterators):
-            action = stream_ids[output[0]]
-            actions[action].append(output)
-        yield actions
+        async for output in merge_iterators(self.log, action_keys, iterators):
+            if isinstance(output[0], str):
+                yield {f"{output[0]}": output[1]}
 
     async def stream(self, target_output: None | str = None) -> AsyncIterator[Any]:
         """

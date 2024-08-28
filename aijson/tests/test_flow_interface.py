@@ -62,14 +62,13 @@ async def test_stream_all(log_history):
     flow = Flow(config)
     outputs = flow.stream_all()
 
-    expected_outputs = [3, 4, 5]
-    outputs = await flow.run_all()
+    expected_outputs = {"add_two": 3, "add_three": 4, "add_four": 5}
+    outputs = flow.stream_all()
 
-    assert len(outputs) == 3
-
-    for output, expected in zip(outputs, expected_outputs):
-        assert output.result == expected
-
+    async for output in outputs:
+        for action_name in output:
+            expected_output = expected_outputs.get(action_name)
+            assert output[action_name].result == expected_output
     action_name = "test_add"
     assert_logs(log_history, "add_two", action_name, assert_empty=False)
     assert_logs(log_history, "add_three", action_name, assert_empty=False)
