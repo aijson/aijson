@@ -511,36 +511,14 @@ class ActionService:
 
         iterators = []
         for id_, stream in zip(executable_ids, stream_flags):
-            executable = flow[id_]
-            if isinstance(executable, ActionInvocation):
-                iter_ = self.stream_action(
-                    log=log,
-                    action_id=id_,
-                    variables=variables,
-                    partial=stream,
-                    flow=flow,
-                    task_prefix=task_prefix,
-                )
-            elif isinstance(executable, Loop):
-                iter_ = self.stream_loop(
-                    log=log,
-                    loop_id=id_,
-                    variables=variables,
-                    partial=stream,
-                    flow=flow,
-                    task_prefix=task_prefix,
-                )
-            elif isinstance(executable, ValueDeclaration):
-                iter_ = self.stream_value_declaration(
-                    log=log,
-                    value_declaration_id=id_,
-                    variables=variables,
-                    partial=stream,
-                    flow=flow,
-                    task_prefix=task_prefix,
-                )
-            else:
-                assert_never(executable)
+            iter_ = self.stream_executable(
+                log=log,
+                executable_id=id_,
+                variables=variables,
+                partial=stream,
+                flow=flow,
+                task_prefix=task_prefix,
+            )
             iterators.append(iter_)
 
         merged_iterator = merge_iterators(
@@ -1201,6 +1179,7 @@ class ActionService:
         variables: None | dict[str, Any] = None,
         partial: bool = True,
         flow: FlowConfig | None = None,
+        task_prefix: str = "",
     ) -> AsyncIterator[list[Outputs] | Outputs]:
         if flow is None:
             flow = self.config.flow
@@ -1214,12 +1193,18 @@ class ActionService:
                 variables=variables,
                 partial=partial,
                 flow=flow,
+                task_prefix=task_prefix,
             ):
                 yield outputs
         elif isinstance(executable, Loop):
             result = Sentinel
             async for result in self.stream_loop(
-                log=log, loop_id=executable_id, variables=variables, partial=partial
+                log=log,
+                loop_id=executable_id,
+                variables=variables,
+                partial=partial,
+                flow=flow,
+                task_prefix=task_prefix,
             ):
                 pass
             if is_sentinel(result):
@@ -1234,6 +1219,7 @@ class ActionService:
                 variables=variables,
                 partial=partial,
                 flow=flow,
+                task_prefix=task_prefix,
             ):
                 yield outputs
         else:
