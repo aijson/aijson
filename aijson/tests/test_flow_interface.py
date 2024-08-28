@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from aijson import Flow
+from aijson.tests.resources.testing_actions import AddOutputs
 from aijson.tests.test_action_service import assert_logs
 from aijson.utils.loader_utils import load_config_file
 
@@ -43,6 +44,7 @@ async def test_default_model_var(log_history):
 async def test_run_all(log_history):
     config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
     flow = Flow(config)
+
     expected_outputs = [3, 4, 5]
     outputs = await flow.run_all()
 
@@ -60,15 +62,24 @@ async def test_run_all(log_history):
 async def test_stream_all(log_history):
     config = load_config_file("aijson/tests/resources/run_all.ai.yaml")
     flow = Flow(config)
-    outputs = flow.stream_all()
+    stream_all = flow.stream_all()
 
-    expected_outputs = {"add_two": 3, "add_three": 4, "add_four": 5}
-    outputs = flow.stream_all()
+    expected_outputs = {
+        "add_two": AddOutputs(result=3),
+        "add_three": AddOutputs(result=4),
+        "add_four": AddOutputs(result=5),
+    }
 
-    async for output in outputs:
-        for action_name in output:
-            expected_output = expected_outputs.get(action_name)
-            assert output[action_name].result == expected_output
+    i = 0
+    outputs = {}
+    async for outputs in stream_all:
+        partial_expected_output = {
+            k: v for j, (k, v) in enumerate(expected_outputs.items()) if j <= i
+        }
+        assert partial_expected_output == outputs
+        i += 1
+    assert outputs == expected_outputs
+
     action_name = "test_add"
     assert_logs(log_history, "add_two", action_name, assert_empty=False)
     assert_logs(log_history, "add_three", action_name, assert_empty=False)
