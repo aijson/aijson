@@ -19,16 +19,14 @@ from aijson.models.config.action import (
     ActionInvocation,
     ActionMeta,
 )
-from aijson.models.config.flow import ActionConfig, Loop
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
     VarDeclaration,
     LinkDeclaration,
 )
 from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
-from aijson.models.primitives import HintLiteral, ExecutableId, ExecutableName
+from aijson.models.primitives import HintLiteral, ExecutableName
 from aijson.utils.json_schema_utils import ModelNamer
-from aijson.utils.loader_utils import load_config_file
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
     build_field_description,
@@ -267,6 +265,8 @@ def build_link_literal(
     strict: bool,
     include_paths: bool,
 ) -> type[str]:
+    from aijson.models.config.flow import ActionConfig, Loop
+    from aijson.utils.loader_utils import load_config_file
 
     try:
         # load the file not as a non-strict model
@@ -279,23 +279,22 @@ def build_link_literal(
         )
         return str
 
-    action_invocations = {}
     # actions = get_actions_dict()
-    for action_id, action_invocation in action_config.flow.items():
-        if isinstance(action_invocation, (Loop, ValueDeclaration)):
-            # TODO support for loops in link fields
-            continue
-        action_invocations[action_id] = action_invocation
-
     union_elements = []
 
     if not strict:
         union_elements.append(str)
 
     actions_dict = get_actions_dict()
+    for action_id, action_invocation in action_config.flow.items():
+        if isinstance(action_invocation, (Loop)):
+            # TODO fixing Loop
+            continue
+        if isinstance(action_invocation, (ValueDeclaration)):
+            union_elements.append(Literal[action_id])
+            continue
 
-    # if there are any models, then each recursive subfield is a var, like jsonpath
-    for action_id, action_invocation in action_invocations.items():
+        # if there are any models, then each recursive subfield is a var, like jsonpath
         # TODO support value declarations and for loops here
         try:
             action_type = actions_dict[action_invocation.action]
@@ -565,7 +564,8 @@ def import_custom_actions(path: str):
         dirs[:] = [
             d
             for d in dirs
-            if not d[0] == "." and "site-packages" not in dirs
+            if not d[0] == "."
+            and "site-packages" not in dirs
             # TODO can we remove the above checks for sake of this one?
             and os.path.exists(os.path.join(root, d, "__init__.py"))
         ]
