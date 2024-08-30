@@ -13,11 +13,13 @@ from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
+from aijson.log_config import get_logger
 from aijson.models.config.action import (
     InternalActionBase,
     ActionInvocation,
     ActionMeta,
 )
+from aijson.models.config.flow import ActionConfig, Loop
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
     VarDeclaration,
@@ -26,6 +28,7 @@ from aijson.models.config.value_declarations import (
 from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
 from aijson.models.primitives import HintLiteral, ExecutableId, ExecutableName
 from aijson.utils.json_schema_utils import ModelNamer
+from aijson.utils.loader_utils import load_config_file
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
     build_field_description,
@@ -260,10 +263,30 @@ def build_action_description(
 
 
 def build_link_literal(
-    action_invocations: dict[ExecutableId, ActionInvocation],
+    config_filename: str,
     strict: bool,
     include_paths: bool,
 ) -> type[str]:
+
+    try:
+        # load the file not as a non-strict model
+        action_config = load_config_file(config_filename, config_model=ActionConfig)
+    except pydantic.ValidationError:
+        log = get_logger()
+        log.debug(
+            "Failed to load action config",
+            exc_info=True,
+        )
+        return str
+
+    action_invocations = {}
+    # actions = get_actions_dict()
+    for action_id, action_invocation in action_config.flow.items():
+        if isinstance(action_invocation, (Loop, ValueDeclaration)):
+            # TODO support for loops in link fields
+            continue
+        action_invocations[action_id] = action_invocation
+
     union_elements = []
 
     if not strict:
@@ -542,8 +565,7 @@ def import_custom_actions(path: str):
         dirs[:] = [
             d
             for d in dirs
-            if not d[0] == "."
-            and "site-packages" not in dirs
+            if not d[0] == "." and "site-packages" not in dirs
             # TODO can we remove the above checks for sake of this one?
             and os.path.exists(os.path.join(root, d, "__init__.py"))
         ]
