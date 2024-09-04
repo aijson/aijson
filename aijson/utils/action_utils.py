@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import sys
+from types import UnionType
 import typing
 from typing import Any, Annotated, Literal, Union, Type
 
@@ -264,7 +265,7 @@ def build_link_literal(
     config_filename: str,
     strict: bool,
     include_paths: bool,
-) -> type[str]:
+) -> tuple[type[str], dict[str, UnionType | None]]:
     from aijson.models.config.flow import ActionConfig, Loop
     from aijson.utils.loader_utils import load_config_file
 
@@ -277,88 +278,97 @@ def build_link_literal(
             "Failed to load action config",
             exc_info=True,
         )
-        return str
+        return (str, {})
 
     # actions = get_actions_dict()
-    union_elements = []
 
+    union_elements = []
     if not strict:
         union_elements.append(str)
 
     actions_dict = get_actions_dict()
-    for action_id, action_invocation in action_config.flow.items():
-        if isinstance(action_invocation, (Loop)):
-            # TODO fixing Loop
-            continue
-        if isinstance(action_invocation, (ValueDeclaration)):
-            action_literal = Literal[action_id]  # type: ignore
-            union_elements.append(action_literal)
-            continue
+    loop_elements: dict[str, UnionType | None] = {}
 
-        # if there are any models, then each recursive subfield is a var, like jsonpath
-        # TODO support value declarations and for loops here
-        try:
-            action_type = actions_dict[action_invocation.action]
-        except KeyError:
-            continue
-        outputs_type = action_type._get_outputs_type(action_invocation)
-        base_description = build_action_description(
-            action_type,
-            action_invocation=action_invocation,
-            markdown=False,
-            include_title=True,
-            include_io=False,
-            include_paths=include_paths,
-            title_suffix=" Output",
-        )
-        base_markdown_description = build_action_description(
-            action_type,
-            action_invocation=action_invocation,
-            markdown=True,
-            include_title=True,
-            include_io=False,
-            include_paths=include_paths,
-            title_suffix=" Output",
-        )
+    def build(action_config: ActionConfig):
+        union_elements = []
+        for action_id, action_invocation in action_config.flow.items():
+            if isinstance(action_invocation, (Loop)):
+                # TODO fixing Loop
+                action_literal = Literal[action_id]  # type: ignore
+                union_elements.append(action_literal)
+                links = build(action_invocation)
+                loop_elements[action_id] = links
+                continue
+            if isinstance(action_invocation, (ValueDeclaration)):
+                action_literal = Literal[action_id]  # type: ignore
+                union_elements.append(action_literal)
+                continue
 
-        if is_basemodel_subtype(outputs_type):
-            if issubclass(outputs_type, DefaultOutputOutputs):
-                output_attr = outputs_type._default_output
-                field = outputs_type.model_fields[output_attr]
-                annotated_field = _build_annotated_field(
-                    base_description=base_description,
-                    base_markdown_description=base_markdown_description,
-                    field=field,
-                    include_paths=include_paths,
-                    name=output_attr,
-                    alias_name=action_id,
-                )
-                union_elements.append(annotated_field)
-            union_elements.extend(
-                _get_recursive_subfields(
-                    outputs_type,
-                    base_description,
-                    base_markdown_description,
-                    include_paths=include_paths,
-                    name_prefix=f"{action_id}.",
-                )
+            # if there are any models, then each recursive subfield is a var, like jsonpath
+            try:
+                action_type = actions_dict[action_invocation.action]
+            except KeyError:
+                continue
+            outputs_type = action_type._get_outputs_type(action_invocation)
+            base_description = build_action_description(
+                action_type,
+                action_invocation=action_invocation,
+                markdown=False,
+                include_title=True,
+                include_io=False,
+                include_paths=include_paths,
+                title_suffix=" Output",
             )
-        else:
-            union_elements.append(
-                _build_annotated_field(
-                    base_description=base_description,
-                    base_markdown_description=base_markdown_description,
-                    field=FieldInfo(
-                        annotation=outputs_type,
-                    ),
-                    include_paths=include_paths,
-                    name=action_id,
-                )
+            base_markdown_description = build_action_description(
+                action_type,
+                action_invocation=action_invocation,
+                markdown=True,
+                include_title=True,
+                include_io=False,
+                include_paths=include_paths,
+                title_suffix=" Output",
             )
 
-    if union_elements:
-        return Union[tuple(union_elements)]  # type: ignore
-    return str
+            if is_basemodel_subtype(outputs_type):
+                if issubclass(outputs_type, DefaultOutputOutputs):
+                    output_attr = outputs_type._default_output
+                    field = outputs_type.model_fields[output_attr]
+                    annotated_field = _build_annotated_field(
+                        base_description=base_description,
+                        base_markdown_description=base_markdown_description,
+                        field=field,
+                        include_paths=include_paths,
+                        name=output_attr,
+                        alias_name=action_id,
+                    )
+                    union_elements.append(annotated_field)
+                union_elements.extend(
+                    _get_recursive_subfields(
+                        outputs_type,
+                        base_description,
+                        base_markdown_description,
+                        include_paths=include_paths,
+                        name_prefix=f"{action_id}.",
+                    )
+                )
+            else:
+                union_elements.append(
+                    _build_annotated_field(
+                        base_description=base_description,
+                        base_markdown_description=base_markdown_description,
+                        field=FieldInfo(
+                            annotation=outputs_type,
+                        ),
+                        include_paths=include_paths,
+                        name=action_id,
+                    )
+                )
+
+        if union_elements:
+            return Union[tuple(union_elements)]  # type: ignore
+
+    links = build(action_config)
+    return (links, loop_elements)  # type: ignore
 
 
 def build_hinted_value_declaration(
@@ -427,7 +437,7 @@ def build_actions(
         )
 
         # build action literal
-        action_literal = Literal[action.name]  # type: ignore
+        action_literal = Literal[action.name]
 
         json_schema_extra_items = {}
 
@@ -565,8 +575,7 @@ def import_custom_actions(path: str):
         dirs[:] = [
             d
             for d in dirs
-            if not d[0] == "."
-            and "site-packages" not in dirs
+            if not d[0] == "." and "site-packages" not in dirs
             # TODO can we remove the above checks for sake of this one?
             and os.path.exists(os.path.join(root, d, "__init__.py"))
         ]
