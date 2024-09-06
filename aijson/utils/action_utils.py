@@ -6,7 +6,7 @@ import os
 import sys
 from types import UnionType
 import typing
-from typing import Any, Annotated, Literal, Union, Type
+from typing import Any, Annotated, Literal, Union, Type, assert_never
 
 import pydantic
 from pydantic import Field, ConfigDict
@@ -291,78 +291,80 @@ def build_link_literal(
 
     def build(action_config: ActionConfig):
         union_elements = []
-        for action_id, action_invocation in action_config.flow.items():
-            if isinstance(action_invocation, (Loop)):
-                # TODO fixing Loop
-                action_literal = Literal[action_id]  # type: ignore
-                union_elements.append(action_literal)
-                links = build(action_invocation)
-                loop_elements[action_id] = links
+        for executable_id, executable_invocation in action_config.flow.items():
+            if isinstance(executable_invocation, (Loop)):
+                executable_literal = Literal[executable_id]  # type: ignore
+                union_elements.append(executable_literal)
+                links = build(executable_invocation)
+                loop_elements[executable_id] = links
                 continue
-            if isinstance(action_invocation, (ValueDeclaration)):
-                action_literal = Literal[action_id]  # type: ignore
-                union_elements.append(action_literal)
+            elif isinstance(executable_invocation, (ValueDeclaration)):
+                executable_literal = Literal[executable_id]  # type: ignore
+                union_elements.append(executable_literal)
                 continue
-
-            # if there are any models, then each recursive subfield is a var, like jsonpath
-            try:
-                action_type = actions_dict[action_invocation.action]
-            except KeyError:
-                continue
-            outputs_type = action_type._get_outputs_type(action_invocation)
-            base_description = build_action_description(
-                action_type,
-                action_invocation=action_invocation,
-                markdown=False,
-                include_title=True,
-                include_io=False,
-                include_paths=include_paths,
-                title_suffix=" Output",
-            )
-            base_markdown_description = build_action_description(
-                action_type,
-                action_invocation=action_invocation,
-                markdown=True,
-                include_title=True,
-                include_io=False,
-                include_paths=include_paths,
-                title_suffix=" Output",
-            )
-
-            if is_basemodel_subtype(outputs_type):
-                if issubclass(outputs_type, DefaultOutputOutputs):
-                    output_attr = outputs_type._default_output
-                    field = outputs_type.model_fields[output_attr]
-                    annotated_field = _build_annotated_field(
-                        base_description=base_description,
-                        base_markdown_description=base_markdown_description,
-                        field=field,
-                        include_paths=include_paths,
-                        name=output_attr,
-                        alias_name=action_id,
-                    )
-                    union_elements.append(annotated_field)
-                union_elements.extend(
-                    _get_recursive_subfields(
-                        outputs_type,
-                        base_description,
-                        base_markdown_description,
-                        include_paths=include_paths,
-                        name_prefix=f"{action_id}.",
-                    )
+            elif isinstance(executable_invocation, (ActionInvocation)):
+                # if there are any models, then each recursive subfield is a var, like jsonpath
+                try:
+                    action_type = actions_dict[executable_invocation.action]
+                except KeyError:
+                    continue
+                outputs_type = action_type._get_outputs_type(executable_invocation)
+                base_description = build_action_description(
+                    action_type,
+                    action_invocation=executable_invocation,
+                    markdown=False,
+                    include_title=True,
+                    include_io=False,
+                    include_paths=include_paths,
+                    title_suffix=" Output",
                 )
+                base_markdown_description = build_action_description(
+                    action_type,
+                    action_invocation=executable_invocation,
+                    markdown=True,
+                    include_title=True,
+                    include_io=False,
+                    include_paths=include_paths,
+                    title_suffix=" Output",
+                )
+
+                if is_basemodel_subtype(outputs_type):
+                    if issubclass(outputs_type, DefaultOutputOutputs):
+                        output_attr = outputs_type._default_output
+                        field = outputs_type.model_fields[output_attr]
+                        annotated_field = _build_annotated_field(
+                            base_description=base_description,
+                            base_markdown_description=base_markdown_description,
+                            field=field,
+                            include_paths=include_paths,
+                            name=output_attr,
+                            alias_name=executable_id,
+                        )
+                        union_elements.append(annotated_field)
+                    union_elements.extend(
+                        _get_recursive_subfields(
+                            outputs_type,
+                            base_description,
+                            base_markdown_description,
+                            include_paths=include_paths,
+                            name_prefix=f"{executable_id}.",
+                        )
+                    )
+                else:
+                    union_elements.append(
+                        _build_annotated_field(
+                            base_description=base_description,
+                            base_markdown_description=base_markdown_description,
+                            field=FieldInfo(
+                                annotation=outputs_type,
+                            ),
+                            include_paths=include_paths,
+                            name=executable_id,
+                        )
+                    )
+
             else:
-                union_elements.append(
-                    _build_annotated_field(
-                        base_description=base_description,
-                        base_markdown_description=base_markdown_description,
-                        field=FieldInfo(
-                            annotation=outputs_type,
-                        ),
-                        include_paths=include_paths,
-                        name=action_id,
-                    )
-                )
+                assert_never(executable_invocation)
 
         if union_elements:
             return Union[tuple(union_elements)]  # type: ignore
