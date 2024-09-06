@@ -31,6 +31,7 @@ def _build_aijson_schema(
         link_hint_literal = link_hint_literal[0]
     else:
         link_hint_literal = None
+        loop_elements = {}
 
     HintedActionConfig = build_hinted_action_config(
         action_names=action_names,
@@ -52,7 +53,7 @@ def _build_aijson_schema(
         ).json_schema()
         for action_id, elements in loop_elements.items():
             definitions[f"{link_hint_literal_name}_{action_id}"] = TypeAdapter(
-                elements
+                elements[1]
             ).json_schema()
 
     return workflow_schema
