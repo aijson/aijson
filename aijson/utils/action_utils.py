@@ -25,7 +25,12 @@ from aijson.models.config.value_declarations import (
     LinkDeclaration,
 )
 from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
-from aijson.models.primitives import ExecutableId, HintLiteral, ExecutableName
+from aijson.models.primitives import (
+    ExecutableId,
+    HintLiteral,
+    ExecutableName,
+    LinkLiteral,
+)
 from aijson.utils.json_schema_utils import ModelNamer
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
@@ -264,7 +269,7 @@ def build_link_literal(
     config_filename: str,
     strict: bool,
     include_paths: bool,
-) -> tuple[type[str], dict[ExecutableId, tuple[str, type[str]]]]:
+) -> LinkLiteral:
     """ """
     from aijson.models.config.flow import ActionConfig, Loop
     from aijson.utils.loader_utils import load_config_file
@@ -281,7 +286,7 @@ def build_link_literal(
             "Failed to load action config",
             exc_info=True,
         )
-        return (str, {})
+        return {}
 
     # actions = get_actions_dict()
 
@@ -290,33 +295,24 @@ def build_link_literal(
         union_elements.append(str)
 
     actions_dict = get_actions_dict()
-    loop_elements: dict[ExecutableId, tuple[str, type[str]]] = {}
+    loop_elements: LinkLiteral = {}
 
     def build(flow: dict[ExecutableId, Executable], flow_id: ExecutableId) -> type[str]:
         union_elements = []
         for executable_id, executable_invocation in flow.items():
-            # print(executable_id)
-            # print(flow_id)
-            # print()
             if isinstance(executable_invocation, (Loop)):
-<<<<<<< HEAD
                 executable_literal = Literal[executable_id]  # type: ignore
                 union_elements.append(executable_literal)
-                links = build(executable_invocation)
-                loop_elements[executable_id] = links
-                continue
-            elif isinstance(executable_invocation, (ValueDeclaration)):
-                executable_literal = Literal[executable_id]  # type: ignore
-                union_elements.append(executable_literal)
-                continue
-=======
-                union_elements.append(Literal[executable_id])
                 links = build(executable_invocation.flow, f"{flow_id}.{executable_id}")
-                # print(f"{flow_id}.{executable_id}")
-                loop_elements[executable_id] = (f"{flow_id}.{executable_id}", links)
+                loop_elements[f"{flow_id}.{executable_id}"] = (
+                    f"{flow_id}.{executable_id}",
+                    links,
+                )
+                continue
             elif isinstance(executable_invocation, (ValueDeclaration)):
-                union_elements.append(Literal[executable_id])
->>>>>>> ba1d212 (action_utils: change type definition for build_link_literal)
+                executable_literal = Literal[executable_id]  # type: ignore
+                union_elements.append(executable_literal)
+                continue
             elif isinstance(executable_invocation, (ActionInvocation)):
                 # if there are any models, then each recursive subfield is a var, like jsonpath
                 try:
@@ -386,7 +382,31 @@ def build_link_literal(
         return str
 
     links = build(action_config.flow, "global")
-    return links, loop_elements
+    loop_elements["global"] = ("/", links)
+    return _merge_actions(loop_elements)
+
+
+def _merge_actions(link_literals: LinkLiteral) -> LinkLiteral:
+    updated_link_literals: LinkLiteral = {}
+    updated_link_literals["global"] = link_literals["global"]
+    for flow_name, (other_links, links) in link_literals.items():
+        updated_link_literals[flow_name] = (other_links, links)
+        other_links_splitted = other_links.split(".")
+        full_link_path = ""
+        for index, flow in enumerate(other_links_splitted):
+            if index == len(other_links_splitted):
+                break
+            full_link_path += f"{flow}"
+            other_flow_links = link_literals.get(full_link_path)
+            if other_flow_links is None:
+                continue
+            updated_links = Union[
+                other_flow_links[1], updated_link_literals[flow_name][1]
+            ]
+            updated_link_literals[flow_name] = (links, updated_links)  # type: ignore
+            full_link_path += "."
+
+    return updated_link_literals
 
 
 def build_hinted_value_declaration(
@@ -455,7 +475,7 @@ def build_actions(
         )
 
         # build action literal
-        action_literal = Literal[action.name]
+        action_literal = Literal[action.name]  # type: ignore
 
         json_schema_extra_items = {}
 

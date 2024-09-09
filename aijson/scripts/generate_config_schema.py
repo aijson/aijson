@@ -27,8 +27,8 @@ def _build_aijson_schema(
             strict=strict,
             include_paths=include_paths,
         )
-        loop_elements = link_hint_literal[1]
-        link_hint_literal = link_hint_literal[0]
+        loop_elements = link_hint_literal
+        link_hint_literal = link_hint_literal["global"][1]
     else:
         link_hint_literal = None
         loop_elements = {}
@@ -52,9 +52,10 @@ def _build_aijson_schema(
             link_hint_literal
         ).json_schema()
         for action_id, elements in loop_elements.items():
-            definitions[f"{link_hint_literal_name}_{action_id}"] = TypeAdapter(
-                elements[1]
-            ).json_schema()
+            if action_id != "global":
+                definitions[f"{link_hint_literal_name}_{action_id}"] = TypeAdapter(
+                    elements[1]
+                ).json_schema()
 
     return workflow_schema
 

@@ -28,3 +28,6 @@ TemplateString = str
 
 
 HintLiteral = type[str]
+
+LinkTuple = tuple[str, type[str]]
+LinkLiteral = dict[ExecutableId, LinkTuple]
