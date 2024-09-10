@@ -1,4 +1,3 @@
-import hashlib
 import os
 import uuid
 from unittest.mock import patch, AsyncMock, ANY
@@ -17,33 +16,23 @@ def blob_value():
 
 
 @pytest.fixture
-def blob_key(blob_value):
-    return hashlib.sha256(blob_value).hexdigest()
-
-
-@pytest.fixture
-def blob(blob_key):
-    return Blob(id=blob_key)
-
-
-@pytest.fixture
 def blob_value_2():
     return b"Another test blob value"
 
 
-async def test_save(log, blob_repo, blob, blob_value):
+async def test_save(log, blob_repo, blob_value):
     saved_blob = await blob_repo.save(log, blob_value)
     assert saved_blob.id is not None
     assert saved_blob.file_extension is None
 
 
-async def test_retrieve(log, blob_repo, blob, blob_value):
+async def test_retrieve(log, blob_repo, blob_value):
     saved_blob = await blob_repo.save(log, blob_value)
     retrieved_value = await blob_repo.retrieve(log, saved_blob)
     assert retrieved_value == blob_value
 
 
-async def test_multi_retrieve(log, blob_repo, blob, blob_value):
+async def test_multi_retrieve(log, blob_repo, blob_value):
     value_2 = b"Another value"
     saved_blob = await blob_repo.save(log, blob_value)
     saved_blob_2 = await blob_repo.save(log, value_2)
@@ -51,7 +40,7 @@ async def test_multi_retrieve(log, blob_repo, blob, blob_value):
     assert retrieved_values == [blob_value, value_2]
 
 
-async def test_exists(log, blob_repo, blob, blob_value):
+async def test_exists(log, blob_repo, blob_value):
     saved_blob = await blob_repo.save(log, blob_value)
     exists = await blob_repo.exists(log, saved_blob)
     assert exists is True
@@ -67,7 +56,7 @@ async def test_save_with_file_extension(log, blob_repo, blob_value):
     assert saved_blob.file_extension == file_extension
 
 
-async def test_download(log, blob_repo, blob, blob_value):
+async def test_download(log, blob_repo, blob_value):
     saved_blob = await blob_repo.save(log, blob_value)
     download_path = await blob_repo.download(log, saved_blob)
     assert os.path.exists(download_path)
@@ -77,7 +66,7 @@ async def test_download(log, blob_repo, blob, blob_value):
     os.remove(download_path)  # Clean up the file after test
 
 
-async def test_delete(log, blob_repo, blob, blob_value):
+async def test_delete(log, blob_repo, blob_value):
     saved_blob = await blob_repo.save(log, blob_value)
     exists = await blob_repo.exists(log, saved_blob)
     assert exists is True
@@ -196,7 +185,6 @@ async def test_s3_blocking(
     s3_blob_repo,
     s3,
     s3_client,
-    blob,
     log_history,
     mock_tenacity,
     mock_wait_for,
