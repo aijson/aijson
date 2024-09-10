@@ -41,6 +41,7 @@ def _get_action_invocations(
     for action_id, action_invocation in action_config.flow.items():
         if isinstance(action_invocation, (Loop, ValueDeclaration)):
             # TODO support for loops in link fields
+            action_invocations[action_id] = action_invocation
             continue
         action_invocations[action_id] = action_invocation
 
@@ -149,7 +150,6 @@ if __name__ == "__main__":
         action_names = list(get_actions_dict().keys())
 
         # TODO assert tests not imported before this line
-        import aijson.tests.resources.testing_actions  # noqa
 
         testing_action_names = list(get_actions_dict().keys())
 

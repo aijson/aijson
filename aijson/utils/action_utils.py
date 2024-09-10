@@ -276,11 +276,9 @@ def build_link_literal(
     # if there are any models, then each recursive subfield is a var, like jsonpath
     for action_id, action_invocation in action_invocations.items():
         # TODO support value declarations and for loops here
-        if isinstance(action_invocation, (Loop)):
-            union_elements.append(Literal[action_id])
-            continue
-        elif isinstance(action_invocation, (ValueDeclaration)):
-            union_elements.append(Literal[action_id])
+        if isinstance(action_invocation, (Loop, ValueDeclaration)):
+            action_id = Literal[action_id]  # type: ignore
+            union_elements.append(action_id)
             continue
         try:
             action_type = actions_dict[action_invocation.action]
@@ -482,7 +480,7 @@ def build_actions(
                 arbitrary_types_allowed=True,
                 extra="forbid",
             ),
-            **fields,  # pyright: ignore[reportGeneralTypeIssues]
+            **fields,
         )
         action_models.append(action_basemodel)
     return action_models

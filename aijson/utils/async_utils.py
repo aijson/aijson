@@ -374,7 +374,7 @@ async def measure_async_iterator(
     #     try:
     #         if out is not sentinel:
     #             # it still thinks this is an `object()` and not a `T`
-    #             yield out  # type: ignore
+    #             yield out
     #         # timer.start()
     #         out = await measure_coro(
     #             log,
