@@ -291,7 +291,8 @@ def build_link_literal(
             # TODO fixing Loop
             continue
         if isinstance(action_invocation, (ValueDeclaration)):
-            union_elements.append(Literal[action_id])
+            action_literal = Literal[action_id]  # type: ignore
+            union_elements.append(action_literal)
             continue
 
         # if there are any models, then each recursive subfield is a var, like jsonpath
