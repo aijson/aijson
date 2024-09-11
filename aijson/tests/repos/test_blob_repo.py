@@ -1,3 +1,4 @@
+import hashlib
 import os
 import uuid
 from unittest.mock import patch, AsyncMock, ANY
@@ -8,6 +9,16 @@ from boto3.exceptions import ResourceLoadException
 from botocore.exceptions import EndpointConnectionError
 
 from aijson.models.blob import Blob
+
+
+@pytest.fixture
+def blob_key(blob_value):
+    return hashlib.sha256(blob_value).hexdigest()
+
+
+@pytest.fixture
+def blob(blob_key):
+    return Blob(id=blob_key)
 
 
 @pytest.fixture
@@ -185,6 +196,7 @@ async def test_s3_blocking(
     s3_blob_repo,
     s3,
     s3_client,
+    blob,
     log_history,
     mock_tenacity,
     mock_wait_for,

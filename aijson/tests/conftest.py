@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import tenacity
 import yaml
+from aijson.repos.document_repo import DocumentRepo, InMemoryDocumentRepo
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -159,6 +160,12 @@ async def in_memory_blob(log, in_memory_blob_repo) -> Blob:
 @pytest.fixture
 async def blob(log, blob_repo) -> Blob:
     return await blob_repo.save(log, b"test_blob", file_extension="txt")
+
+
+@pytest.fixture
+async def document_repo() -> DocumentRepo:
+    # TODO test the others too, like in blob repo
+    return InMemoryDocumentRepo()
 
 
 @pytest.fixture
