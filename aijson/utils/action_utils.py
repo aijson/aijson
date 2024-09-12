@@ -13,6 +13,7 @@ from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
+from aijson.log_config import get_logger
 from aijson.models.config.action import (
     InternalActionBase,
     ActionInvocation,
@@ -24,7 +25,7 @@ from aijson.models.config.value_declarations import (
     LinkDeclaration,
 )
 from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
-from aijson.models.primitives import HintLiteral, ExecutableId, ExecutableName
+from aijson.models.primitives import HintLiteral, ExecutableName
 from aijson.utils.json_schema_utils import ModelNamer
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
@@ -260,19 +261,41 @@ def build_action_description(
 
 
 def build_link_literal(
-    action_invocations: dict[ExecutableId, ActionInvocation],
+    config_filename: str,
     strict: bool,
     include_paths: bool,
 ) -> type[str]:
+    from aijson.models.config.flow import ActionConfig, Loop
+    from aijson.utils.loader_utils import load_config_file
+
+    try:
+        # load the file not as a non-strict model
+        action_config = load_config_file(config_filename, config_model=ActionConfig)
+    except pydantic.ValidationError:
+        log = get_logger()
+        log.debug(
+            "Failed to load action config",
+            exc_info=True,
+        )
+        return str
+
+    # actions = get_actions_dict()
     union_elements = []
 
     if not strict:
         union_elements.append(str)
 
     actions_dict = get_actions_dict()
+    for action_id, action_invocation in action_config.flow.items():
+        if isinstance(action_invocation, (Loop)):
+            # TODO fixing Loop
+            continue
+        if isinstance(action_invocation, (ValueDeclaration)):
+            action_literal = Literal[action_id]  # type: ignore
+            union_elements.append(action_literal)
+            continue
 
-    # if there are any models, then each recursive subfield is a var, like jsonpath
-    for action_id, action_invocation in action_invocations.items():
+        # if there are any models, then each recursive subfield is a var, like jsonpath
         # TODO support value declarations and for loops here
         try:
             action_type = actions_dict[action_invocation.action]

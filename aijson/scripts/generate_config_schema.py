@@ -2,49 +2,16 @@ import argparse
 import json
 import os
 
-import pydantic
-from aijson.models.config.value_declarations import ValueDeclaration
 from pydantic import TypeAdapter
 
-from aijson.log_config import get_logger
-from aijson.models.config.action import ActionInvocation
 from aijson.models.config.flow import (
-    Loop,
     build_hinted_action_config,
-    ActionConfig,
 )
-from aijson.models.primitives import ExecutableId
-from aijson.utils.loader_utils import load_config_file
 from aijson.utils.action_utils import (
     build_link_literal,
     get_actions_dict,
     import_custom_actions,
 )
-
-
-def _get_action_invocations(
-    config_filename: str,
-) -> dict[ExecutableId, ActionInvocation]:
-    try:
-        # load the file not as a non-strict model
-        action_config = load_config_file(config_filename, config_model=ActionConfig)
-    except pydantic.ValidationError:
-        log = get_logger()
-        log.debug(
-            "Failed to load action config",
-            exc_info=True,
-        )
-        return {}
-
-    action_invocations = {}
-    # actions = get_actions_dict()
-    for action_id, action_invocation in action_config.flow.items():
-        if isinstance(action_invocation, (Loop, ValueDeclaration)):
-            # TODO support for loops in link fields
-            continue
-        action_invocations[action_id] = action_invocation
-
-    return action_invocations
 
 
 def _build_aijson_schema(
@@ -55,11 +22,8 @@ def _build_aijson_schema(
     link_hint_literal_name: str = "__LinkHintLiteral",
 ):
     if config_filename:
-        action_invocations = _get_action_invocations(
-            config_filename=config_filename,
-        )
         link_hint_literal = build_link_literal(
-            action_invocations=action_invocations,
+            config_filename=config_filename,
             strict=strict,
             include_paths=include_paths,
         )
