@@ -29,7 +29,7 @@ from aijson.models.primitives import (
     ExecutableId,
     HintLiteral,
     ExecutableName,
-    LinkLiteral,
+    ExecutablePath, LinkHints,
 )
 from aijson.utils.json_schema_utils import ModelNamer
 from aijson.utils.pydantic_utils import is_basemodel_subtype
@@ -265,17 +265,18 @@ def build_action_description(
     return "\n\n".join(description_items)
 
 
-def build_link_literal(
+def build_link_hints(
     config_filename: str,
     strict: bool,
     include_paths: bool,
-) -> LinkLiteral:
-    """ """
+) -> LinkHints:
+    """
+    Builds a dictionary mapping namespace paths in the flow (including subflows)
+    to hint literals of possible link values.
+    """
     from aijson.models.config.flow import ActionConfig, Loop
     from aijson.utils.loader_utils import load_config_file
     from aijson.models.config.flow import Executable
-
-    # z: tuple[str, type[str]] = ("a", str)
 
     try:
         # load the file not as a non-strict model
@@ -288,32 +289,31 @@ def build_link_literal(
         )
         return {}
 
-    # actions = get_actions_dict()
-
-    union_elements = []
-    if not strict:
-        union_elements.append(str)
-
     actions_dict = get_actions_dict()
-    loop_elements: LinkLiteral = {}
 
-    def build(flow: dict[ExecutableId, Executable], flow_id: ExecutableId) -> type[str]:
-        union_elements = []
+    def build(
+        flow: dict[ExecutableId, Executable], flow_id: ExecutableId
+    ) -> LinkHints:
+        link_hints = {}
+
+        namespace_types = []
+        if not strict:
+            namespace_types.append(str)
+
         for executable_id, executable_invocation in flow.items():
-            if isinstance(executable_invocation, (Loop)):
-                executable_literal = Literal[executable_id]  # type: ignore
-                union_elements.append(executable_literal)
-                links = build(executable_invocation.flow, f"{flow_id}.{executable_id}")
-                loop_elements[f"{flow_id}.{executable_id}"] = (
-                    f"{flow_id}.{executable_id}",
-                    links,
+            if isinstance(executable_invocation, Loop):
+                # TODO give better hints for internals of loop
+                # executable_literal = Literal[executable_id]  # type: ignore
+                # namespace_types.append(executable_literal)
+                link_hints |= build(
+                    executable_invocation.flow, f"{flow_id}.{executable_id}"
                 )
                 continue
-            elif isinstance(executable_invocation, (ValueDeclaration)):
+            elif isinstance(executable_invocation, ValueDeclaration):
                 executable_literal = Literal[executable_id]  # type: ignore
-                union_elements.append(executable_literal)
+                namespace_types.append(executable_literal)
                 continue
-            elif isinstance(executable_invocation, (ActionInvocation)):
+            elif isinstance(executable_invocation, ActionInvocation):
                 # if there are any models, then each recursive subfield is a var, like jsonpath
                 try:
                     action_type = actions_dict[executable_invocation.action]
@@ -351,8 +351,8 @@ def build_link_literal(
                             name=output_attr,
                             alias_name=executable_id,
                         )
-                        union_elements.append(annotated_field)
-                    union_elements.extend(
+                        namespace_types.append(annotated_field)
+                    namespace_types.extend(
                         _get_recursive_subfields(
                             outputs_type,
                             base_description,
@@ -362,7 +362,7 @@ def build_link_literal(
                         )
                     )
                 else:
-                    union_elements.append(
+                    namespace_types.append(
                         _build_annotated_field(
                             base_description=base_description,
                             base_markdown_description=base_markdown_description,
@@ -377,13 +377,15 @@ def build_link_literal(
             else:
                 assert_never(executable_invocation)
 
-        if union_elements:
-            return Union[tuple(union_elements)]  # type: ignore
-        return str
+        if namespace_types:
+            hint_union = Union[tuple(namespace_types)]  # type: ignore
+        else:
+            hint_union = str
 
-    links = build(action_config.flow, "global")
-    loop_elements["global"] = ("/", links)
-    return loop_elements
+        link_hints[flow_id] = hint_union
+        return link_hints
+
+    return build(action_config.flow, "$")
 
 
 def build_hinted_value_declaration(
