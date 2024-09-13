@@ -35,7 +35,7 @@ def get_redis_url() -> str:
     return f"redis://{username}:{password}@{host}:{port}"
 
 
-def load_aioredis():
+def load_aioredis() -> aioredis.Redis:
     host = get_secret("REDIS_HOST")
     if host is None:
         host = "localhost"
@@ -52,9 +52,18 @@ def load_aioredis():
     )
 
 
-def get_aioredis():
+def get_aioredis() -> aioredis.Redis:
     global aioredis_client
     # TODO use a redis connection pool
     if aioredis_client is None or aioredis_client.connection is None:
         aioredis_client = load_aioredis()
     return aioredis_client
+
+
+async def try_redis():
+    try:
+        redis = get_aioredis()
+        await redis.ping()
+        return True
+    except Exception:
+        return False
