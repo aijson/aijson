@@ -383,30 +383,7 @@ def build_link_literal(
 
     links = build(action_config.flow, "global")
     loop_elements["global"] = ("/", links)
-    return _merge_actions(loop_elements)
-
-
-def _merge_actions(link_literals: LinkLiteral) -> LinkLiteral:
-    updated_link_literals: LinkLiteral = {}
-    updated_link_literals["global"] = link_literals["global"]
-    for flow_name, (other_links, links) in link_literals.items():
-        updated_link_literals[flow_name] = (other_links, links)
-        other_links_splitted = other_links.split(".")
-        full_link_path = ""
-        for index, flow in enumerate(other_links_splitted):
-            if index == len(other_links_splitted):
-                break
-            full_link_path += f"{flow}"
-            other_flow_links = link_literals.get(full_link_path)
-            if other_flow_links is None:
-                continue
-            updated_links = Union[
-                other_flow_links[1], updated_link_literals[flow_name][1]
-            ]
-            updated_link_literals[flow_name] = (links, updated_links)  # type: ignore
-            full_link_path += "."
-
-    return updated_link_literals
+    return loop_elements
 
 
 def build_hinted_value_declaration(
