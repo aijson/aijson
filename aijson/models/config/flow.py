@@ -14,6 +14,7 @@ from aijson.models.primitives import (
     ContextVarPath,
     ExecutableId,
     HintLiteral,
+    LinkHints,
 )
 from aijson.utils.action_utils import build_hinted_value_declaration, build_actions
 from aijson.models.config.value_declarations import (
@@ -74,10 +75,13 @@ FlowConfig = dict[ExecutableId, Executable]
 def build_hinted_action_config(
     action_names: list[str] | None = None,
     vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
+    link_hints: LinkHints | None = None,
     include_paths: bool = False,
     strict: bool = False,
 ):
+    # TODO handle subflows
+    links = link_hints['$']
+
     HintedValueDeclaration = build_hinted_value_declaration(
         # vars_=vars_,
         links=links,

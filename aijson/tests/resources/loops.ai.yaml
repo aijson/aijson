@@ -1,0 +1,39 @@
+version: "0.1"
+flow:
+  action1:
+    for: item
+    in:
+      var: items
+    flow:
+      action1:
+        text: hello world  {{action2}}
+      action2:
+        action: test_add
+        a: 1
+        b: 2
+      action3:
+        for: item
+        in:
+          var: items
+        flow:
+          action9:
+            action: test_add
+            a: 3
+            b: 4
+          action2:
+            action: test_stringifier
+            value: 5
+          action3:
+            action: test_add
+            a: 2
+            b: 3
+          action4:
+            action: test_add
+            a: 1
+            b: 5
+  action2:
+    text: echo
+  action5:
+    action: test_add
+    a: 1
+    b: 2
