@@ -52,3 +52,40 @@ async def test_store_and_retrieve_two(
 async def test_exists(log, document_repo, document_collection, document_value):
     document_id = await document_repo.store(log, document_collection, document_value)
     assert await document_repo.exists(log, document_collection, document_id) is True
+
+
+async def test_add_to_field(log, document_repo):
+    org_id = await document_repo.store(
+        log,
+        "orgs",
+        {
+            "name": "someorg",
+        },
+    )
+    user_id = await document_repo.store(
+        log,
+        f"orgs/{org_id}/users",
+        {
+            "name": "someuser",
+        },
+    )
+
+    # print(await document_repo.retrieve(log, "test", id_))
+    # print(await document_repo.retrieve(log, "test/foo", id2))
+    assert await document_repo.retrieve(log, "orgs", org_id) == {
+        "name": "someorg",
+        "users": {
+            user_id: {
+                "name": "someuser",
+            }
+        },
+    }
+    assert await document_repo.retrieve(log, f"orgs/{org_id}/users", user_id) == {
+        "name": "someuser",
+    }
+
+
+async def test_defined_document_id(log, document_repo):
+    document_id = "some_id"
+    await document_repo.store(log, "test", {"foo": "bar"}, document_id)
+    assert await document_repo.retrieve(log, "test", document_id) == {"foo": "bar"}

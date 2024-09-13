@@ -9,7 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import tenacity
 import yaml
-from aijson.repos.document_repo import DocumentRepo, InMemoryDocumentRepo
+from aijson.repos.document_repo import (
+    DocumentRepo,
+    InMemoryDocumentRepo,
+    FirestoreDocumentRepo,
+)
+from mockfirestore import AsyncMockFirestore
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -163,9 +168,20 @@ async def blob(log, blob_repo) -> Blob:
 
 
 @pytest.fixture
-async def document_repo() -> DocumentRepo:
+async def in_memory_document_repo() -> DocumentRepo:
     # TODO test the others too, like in blob repo
     return InMemoryDocumentRepo()
+
+
+@pytest.fixture
+async def document_repo(request: pytest.FixtureRequest) -> DocumentRepo:
+    repo_type = request.param
+    if issubclass(repo_type, FirestoreDocumentRepo):
+        mock_db = AsyncMockFirestore()
+        repo = repo_type(db=mock_db)  # pyright: ignore [reportArgumentType]
+    else:
+        repo = repo_type()
+    return repo
 
 
 @pytest.fixture
@@ -413,6 +429,18 @@ def main_entrypoint_mocked_trace_id(mock_trace_id, discord_entrypoint):
 
 
 def pytest_generate_tests(metafunc):
+    if "document_repo" in metafunc.fixturenames:
+        params = [
+            pytest.param(InMemoryDocumentRepo),
+            pytest.param(
+                FirestoreDocumentRepo,
+            ),
+        ]
+        metafunc.parametrize(
+            "document_repo",
+            params,
+            indirect=True,
+        )
     if "blob_repo" in metafunc.fixturenames:
         params = [
             # the True/False here mean `should_mock_boto`

@@ -44,6 +44,7 @@ sqlalchemy = { version = "^2.0.30", optional = true }
 aiosqlite = { version = "^0.20.0", optional = true }
 gradio = "^4.38.1"
 python-dotenv = "^1.0.1"
+firebase-admin = { version = "^6.5.0", optional = true }
 
 
 [tool.poetry.extras]
@@ -51,6 +52,7 @@ python-dotenv = "^1.0.1"
 openai = ["openai"]
 anthropic = ["anthropic"]
 gcloud = ["google-cloud-aiplatform"]
+firebase = ["firebase-admin"]
 pg = ["sqlalchemy", "psycopg2", "asyncpg", "pandas"]
 sqlite = ["sqlalchemy", "aiosqlite", "pandas"]
 transformers = ["sentence-transformers", "infinity-emb"]
@@ -74,6 +76,7 @@ jinja2schema = {git = "https://github.com/irgolic/jinja2schema.git", branch = "m
 moto = {extras = ["server"], version = "^4.2.13"}
 aiosqlite = "^0.20.0"
 aijson-meta = ">=0.1.6"
+mock-firestore-async = "^0.11.3"
 
 [build-system]
 requires = ["poetry-core"]
