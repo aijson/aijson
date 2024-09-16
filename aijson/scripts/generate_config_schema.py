@@ -28,7 +28,7 @@ def _build_aijson_schema(
             include_paths=include_paths,
         )
     else:
-        link_hints = {}
+        link_hints = None
 
     HintedActionConfig = build_hinted_action_config(
         action_names=action_names,

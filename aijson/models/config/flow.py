@@ -80,7 +80,10 @@ def build_hinted_action_config(
     strict: bool = False,
 ):
     # TODO handle subflows
-    links = link_hints['$']
+    if link_hints is None:
+        links = None
+    else:
+        links = link_hints["$"]
 
     HintedValueDeclaration = build_hinted_value_declaration(
         # vars_=vars_,

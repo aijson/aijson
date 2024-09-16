@@ -291,7 +291,7 @@ def blocking_func():
     return block
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def testing_actions_type():
     # TODO assert tests not imported before this line
     import aijson.tests.resources.testing_actions  # noqa

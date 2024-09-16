@@ -22,6 +22,7 @@ from aijson.models.config.value_declarations import (
 from aijson.models.io import DefaultOutputOutputs
 from aijson.models.primitives import (
     ExecutableId,
+    HintLiteral,
     LinkHints,
 )
 from aijson.utils.pydantic_utils import is_basemodel_subtype
@@ -50,25 +51,31 @@ def build_link_hints(
 
     actions_dict = get_actions_dict()
 
-    def build(flow: dict[ExecutableId, Executable], flow_id: ExecutableId) -> LinkHints:
+    def build(
+        flow: dict[ExecutableId, Executable],
+        flow_id: ExecutableId,
+        outside_namespace: dict[ExecutableId, HintLiteral] | None = None,
+    ) -> LinkHints:
+        if outside_namespace is None:
+            outside_namespace = {}
+
         link_hints = {}
 
-        namespace_types = []
-        if not strict:
-            namespace_types.append(str)
+        namespace_items: dict[ExecutableId, HintLiteral] = outside_namespace.copy()
+        dependent_namespaces = []
 
         for executable_id, executable_invocation in flow.items():
             if isinstance(executable_invocation, Loop):
                 # TODO give better hints for internals of loop
                 # executable_literal = Literal[executable_id]  # type: ignore
                 # namespace_types.append(executable_literal)
-                link_hints |= build(
-                    executable_invocation.flow, f"{flow_id}.{executable_id}"
+                dependent_namespaces.append(
+                    (executable_invocation.flow, f"{flow_id}.{executable_id}")
                 )
                 continue
             elif isinstance(executable_invocation, ValueDeclaration):
                 executable_literal = Literal[executable_id]  # type: ignore
-                namespace_types.append(executable_literal)
+                namespace_items[executable_id] = executable_literal
                 continue
             elif isinstance(executable_invocation, ActionInvocation):
                 # if there are any models, then each recursive subfield is a var, like jsonpath
@@ -96,6 +103,8 @@ def build_link_hints(
                     title_suffix=" Output",
                 )
 
+                action_literal_items = []
+
                 if is_basemodel_subtype(outputs_type):
                     if issubclass(outputs_type, DefaultOutputOutputs):
                         output_attr = outputs_type._default_output
@@ -108,8 +117,8 @@ def build_link_hints(
                             name=output_attr,
                             alias_name=executable_id,
                         )
-                        namespace_types.append(annotated_field)
-                    namespace_types.extend(
+                        action_literal_items.append(annotated_field)
+                    action_literal_items.extend(
                         _get_recursive_subfields(
                             outputs_type,
                             base_description,
@@ -119,7 +128,7 @@ def build_link_hints(
                         )
                     )
                 else:
-                    namespace_types.append(
+                    action_literal_items.append(
                         _build_annotated_field(
                             base_description=base_description,
                             base_markdown_description=base_markdown_description,
@@ -130,11 +139,22 @@ def build_link_hints(
                             name=executable_id,
                         )
                     )
+                namespace_items[executable_id] = Union[tuple(action_literal_items)]  # type: ignore
 
             else:
                 assert_never(executable_invocation)
 
-        if namespace_types:
+        # for each dependent namespace, build the link hints
+        for dependent_flow, dependent_flow_id in dependent_namespaces:
+            link_hints |= build(
+                dependent_flow, dependent_flow_id, outside_namespace=namespace_items
+            )
+
+        namespace_types = list(namespace_items.values())
+        if not strict:
+            namespace_types = [str] + namespace_types
+
+        if namespace_items:
             hint_union = Union[tuple(namespace_types)]  # type: ignore
         else:
             hint_union = str

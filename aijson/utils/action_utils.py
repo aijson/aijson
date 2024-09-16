@@ -466,7 +466,8 @@ def import_custom_actions(path: str):
         dirs[:] = [
             d
             for d in dirs
-            if not d[0] == "." and "site-packages" not in dirs
+            if not d[0] == "."
+            and "site-packages" not in dirs
             # TODO can we remove the above checks for sake of this one?
             and os.path.exists(os.path.join(root, d, "__init__.py"))
         ]
