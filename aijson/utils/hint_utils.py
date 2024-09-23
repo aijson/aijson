@@ -70,7 +70,7 @@ def build_link_hints(
                 # executable_literal = Literal[executable_id]  # type: ignore
                 # namespace_types.append(executable_literal)
                 dependent_namespaces.append(
-                    (executable_invocation.flow, f"{flow_id}.{executable_id}")
+                    (executable_invocation.flow, f"{flow_id}.{executable_id}.flow")
                 )
                 continue
             elif isinstance(executable_invocation, ValueDeclaration):
