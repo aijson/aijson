@@ -9,7 +9,9 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 import gradio as gr  # noqa: E402
 
 
-def single_shot(fn, inputs, outputs: Block | Sequence[Block], include_request: bool = False):
+def single_shot(
+    fn, inputs, outputs: Block | Sequence[Block], include_request: bool = False
+):
     # lower values make the event trigger more times
     # while lagging even with 0.1 it might trigger multiple times
     timer = gr.Timer(0.1)
@@ -41,7 +43,9 @@ def single_shot(fn, inputs, outputs: Block | Sequence[Block], include_request: b
     return timer
 
 
-def single_shot_async(fn, inputs, outputs: Block | Sequence[Block], include_request: bool = False):
+def single_shot_async(
+    fn, inputs, outputs: Block | Sequence[Block], include_request: bool = False
+):
     # lower values make the event trigger more times
     # while lagging even with 0.1 it might trigger multiple times
     timer = gr.Timer(0.1)
