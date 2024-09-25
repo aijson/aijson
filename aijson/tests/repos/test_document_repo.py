@@ -89,3 +89,13 @@ async def test_defined_document_id(log, document_repo):
     document_id = "some_id"
     await document_repo.store(log, "test", {"foo": "bar"}, document_id)
     assert await document_repo.retrieve(log, "test", document_id) == {"foo": "bar"}
+
+
+async def test_retrieve_all(log, document_repo):
+    expected = [{"foo": f"bar{i}"} for i in range(4)]
+    for value in expected:
+        await document_repo.store(log, "test", value)
+    results = await document_repo.retrieve_all(log, "test")
+    assert len(results) == 4
+    for exp in expected:
+        assert exp in results.values()

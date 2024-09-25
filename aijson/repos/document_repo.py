@@ -253,6 +253,7 @@ class FirestoreDocumentRepo(DocumentRepo):
     ) -> dict[DocumentId, Value]:
         coll = self.db.collection("/".join(collection))
         docs = {}
-        async for docref in coll.stream():
+        # TODO why does pyright not like this?
+        async for docref in coll.stream():  # pyright: ignore
             docs[docref.id] = docref.to_dict()
         return docs
