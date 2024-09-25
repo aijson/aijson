@@ -24,13 +24,13 @@ def expected_elements():
             "action2",
             "action5.result",
         },
-        "$.action1": {
+        "$.action1.flow": {
             "action1",
             "action2.result",
             "action5.result",
             # "action3",
         },
-        "$.action1.action3": {
+        "$.action1.flow.action3.flow": {
             "action1",
             "action2.string",
             "action5.result",

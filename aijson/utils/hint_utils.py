@@ -1,4 +1,5 @@
-from typing import Literal, Union, assert_never
+from typing import Literal, Union
+from typing_extensions import assert_never
 
 import pydantic
 from aijson.models.config.flow import ActionConfig, Executable, Loop
