@@ -34,6 +34,8 @@ from aijson.utils.type_utils import get_var_string
 ### Variables
 ###
 
+schema_declaration_key = "__aijson_declaration"
+
 
 class Declaration(StrictModel):
     stream: bool = False
@@ -50,6 +52,12 @@ class Declaration(StrictModel):
 
 
 class TextDeclaration(Declaration):
+    model_config = ConfigDict(
+        json_schema_extra={
+            schema_declaration_key: "text",
+        }
+    )
+
     text: TemplateString = Field(
         description="""
 A text declaration is a jinja2 template, rendered within the context of the flow and any provided variables.
@@ -100,6 +108,12 @@ For more information, see the [Jinja2 documentation](https://jinja.palletsprojec
 
 
 class VarDeclaration(Declaration):
+    model_config = ConfigDict(
+        json_schema_extra={
+            schema_declaration_key: "var",
+        }
+    )
+
     var: ContextVarPath = Field(
         description="A variable declaration references a variable (or path to nested variable) in the context."
     )
@@ -128,6 +142,12 @@ class VarDeclaration(Declaration):
 
 
 class LinkDeclaration(Declaration):
+    model_config = ConfigDict(
+        json_schema_extra={
+            schema_declaration_key: "link",
+        }
+    )
+
     link: ContextVarPath = Field(
         description="A link declaration references another action's output, and ensures that action runs before this one."
     )
@@ -216,6 +236,12 @@ class LinkDeclaration(Declaration):
 
 
 class EnvDeclaration(Declaration):
+    model_config = ConfigDict(
+        json_schema_extra={
+            schema_declaration_key: "env",
+        }
+    )
+
     env: str = Field(
         description="An environment declaration references the name of an environment variable that is loaded during runtime."
     )
@@ -240,6 +266,12 @@ class EnvDeclaration(Declaration):
 
 
 class LambdaDeclaration(Declaration):
+    model_config = ConfigDict(
+        json_schema_extra={
+            schema_declaration_key: "lambda",
+        }
+    )
+
     lambda_: LambdaString = Field(
         alias="lambda",
         description="""
