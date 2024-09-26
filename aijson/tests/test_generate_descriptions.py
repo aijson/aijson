@@ -54,7 +54,7 @@ class Color(str, enum.Enum):
             "transformed",
             FieldInfo.from_annotation(ContextElement),
             False,
-            "`transformed`: ContextVar | ContextLink | ContextTemplate | ContextLambda",
+            "`transformed`: ContextVar | ContextTemplate | ContextLink | ContextLambda",
         ),
     ],
 )

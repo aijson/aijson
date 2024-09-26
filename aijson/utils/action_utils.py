@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import sys
+import types
 import typing
 from typing import Any, Annotated, Literal, Union, Type
 
@@ -20,12 +21,9 @@ from aijson.models.config.action import (
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
-    VarDeclaration,
-    LinkDeclaration,
 )
 from aijson.models.io import Inputs, Outputs
 from aijson.models.primitives import (
-    HintLiteral,
     ExecutableName,
 )
 from aijson.utils.json_schema_utils import ModelNamer
@@ -40,10 +38,7 @@ from aijson.utils.type_utils import (
 def build_input_fields(
     action: type[InternalActionBase[Inputs, Outputs]],
     *,
-    vars_: HintLiteral | None,
-    links: HintLiteral | None,
-    add_union: type | None,
-    strict: bool,
+    add_union: type | types.UnionType | None = None,
     include_paths: bool,
     action_invocation: ActionInvocation | None = None,
 ) -> dict[str, tuple[type, Any]]:
@@ -104,7 +99,7 @@ def build_input_fields(
         new_field_infos[field_name] = new_field_info
 
     # templatify the input fields
-    return templatify_fields(new_field_infos, vars_, links, add_union, strict)
+    return templatify_fields(new_field_infos, add_union)
 
 
 def _get_recursive_subfields(
@@ -262,53 +257,27 @@ def build_action_description(
     return "\n\n".join(description_items)
 
 
-def build_hinted_value_declaration(
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
-    strict: bool = False,
+def build_value_declaration(
     excluded_declaration_types: None | list[type[ValueDeclaration]] = None,
 ) -> type[ValueDeclaration]:
     if excluded_declaration_types is None:
         excluded_declaration_types = []
 
-    union_elements = []
-
-    if vars_:
-        union_elements.append(
-            VarDeclaration.from_hint_literal(vars_, strict),
-        )
-    if (not vars_ or not strict) and VarDeclaration not in excluded_declaration_types:
-        union_elements.append(VarDeclaration)
-
-    if links:
-        union_elements.append(
-            LinkDeclaration.from_hint_literal(links, strict),
-        )
-    if (not links or not strict) and LinkDeclaration not in excluded_declaration_types:
-        union_elements.append(LinkDeclaration)
-
-    other_elements = [
+    union_elements = [
         element
         for element in typing.get_args(ValueDeclaration)
-        if element not in (VarDeclaration, LinkDeclaration)
-        and element not in excluded_declaration_types
+        if element not in excluded_declaration_types
     ]
-    union_elements.extend(other_elements)
 
     return Union[tuple(union_elements)]  # type: ignore
 
 
 def build_actions(
     action_names: list[str] | None = None,
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
     include_paths: bool = False,
-    strict: bool = False,
 ):
     # Dynamically build action models from currently defined actions
     # for best typehints and autocompletion possible in the jsonschema
-
-    HintedValueDeclaration = build_hinted_value_declaration(vars_, links, strict)
 
     if action_names is None:
         action_names = list(get_actions_dict().keys())
@@ -371,16 +340,13 @@ def build_actions(
                 action_literal,
                 ...,
             ),
-            "cache_key": (None | str | HintedValueDeclaration, None),
+            "cache_key": (None | str | ValueDeclaration, None),
         }
 
         # build input fields
         fields |= build_input_fields(
             action,
-            vars_=vars_,
-            links=links,
-            add_union=HintedValueDeclaration,
-            strict=strict,
+            add_union=ValueDeclaration,
             include_paths=include_paths,
         )
 

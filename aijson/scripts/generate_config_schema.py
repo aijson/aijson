@@ -5,7 +5,7 @@ import os
 from pydantic import TypeAdapter
 
 from aijson.models.config.flow import (
-    build_hinted_action_config,
+    build_action_config,
 )
 from aijson.utils.action_utils import (
     get_actions_dict,
@@ -30,12 +30,9 @@ def _build_aijson_schema(
     else:
         link_hints = None
 
-    HintedActionConfig = build_hinted_action_config(
+    HintedActionConfig = build_action_config(
         action_names=action_names,
-        link_hints=link_hints,
-        vars_=None,
         include_paths=include_paths,
-        strict=strict,
     )
     workflow_schema = HintedActionConfig.model_json_schema()
 

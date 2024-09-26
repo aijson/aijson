@@ -3,7 +3,6 @@ from typing import TypeVar, Generic, Any
 
 import structlog
 
-from aijson.models.primitives import HintLiteral
 
 RealType = TypeVar("RealType")
 ConfigType = TypeVar("ConfigType")
@@ -30,10 +29,5 @@ class TransformsFrom:  # (Generic[ConfigType]):
     """
 
     @classmethod
-    def _get_config_type(
-        cls,
-        vars_: HintLiteral | None,
-        links: HintLiteral | None,
-        strict: bool = False,
-    ) -> type:  # -> type[ConfigType]:
+    def _get_config_type(cls) -> type:  # -> type[ConfigType]:
         raise NotImplementedError

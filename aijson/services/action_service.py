@@ -192,7 +192,7 @@ class ActionService:
                     "For more info see: https://aijson.com/docs/guides/using_any_language_model/"
                 )
                 return
-            log.info("Guessed what language model to use", model=default_model.model)
+            log.info("Guessed default language model", model=default_model.model)
             inputs._default_model = default_model
 
         # Get the action instance

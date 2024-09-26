@@ -13,10 +13,8 @@ from aijson.models.primitives import (
     ContextVarName,
     ContextVarPath,
     ExecutableId,
-    HintLiteral,
-    LinkHints,
 )
-from aijson.utils.action_utils import build_hinted_value_declaration, build_actions
+from aijson.utils.action_utils import build_value_declaration, build_actions
 from aijson.models.config.value_declarations import (
     LinkDeclaration,
     LambdaDeclaration,
@@ -35,19 +33,16 @@ class Loop(StrictModel):
     flow: "FlowConfig"
 
 
-def build_model_config(
-    strict: bool = False,
-):
+def build_model_config():
     # Dynamically build the model config like ActionModel, with the ValueDeclarations
 
-    HintedValueDeclaration = build_hinted_value_declaration(
-        strict=strict, excluded_declaration_types=[LinkDeclaration, LambdaDeclaration]
+    PartialValueDeclaration = build_value_declaration(
+        excluded_declaration_types=[LinkDeclaration, LambdaDeclaration]
     )
 
     return transform_and_templatify_type(
         OptionalModelConfig,
-        add_union=HintedValueDeclaration,  # type: ignore
-        strict=strict,
+        add_union=PartialValueDeclaration,  # type: ignore
     )
 
 
@@ -72,33 +67,13 @@ Executable = Union[ActionInvocation, Loop, ValueDeclaration]
 FlowConfig = dict[ExecutableId, Executable]
 
 
-def build_hinted_action_config(
+def build_action_config(
     action_names: list[str] | None = None,
-    vars_: HintLiteral | None = None,
-    link_hints: LinkHints | None = None,
     include_paths: bool = False,
-    strict: bool = False,
 ):
-    # TODO handle subflows
-    # if link_hints is None:
-    #     links = None
-    # else:
-    #     links = link_hints["$"]
-    # TODO WIP handle enum in LSP instead
-    links = str
-
-    HintedValueDeclaration = build_hinted_value_declaration(
-        # vars_=vars_,
-        links=links,
-        strict=strict,
-    )
-
     actions = build_actions(
         action_names=action_names,
-        vars_=vars_,
-        links=links,
         include_paths=include_paths,
-        strict=strict,
     )
     if not actions:
         raise RuntimeError(
@@ -108,22 +83,19 @@ def build_hinted_action_config(
     ActionInvocationUnion = Union[tuple(actions)]  # pyright: ignore
 
     class HintedLoop(Loop):
-        in_: HintedValueDeclaration = Field(  # type: ignore
+        in_: ValueDeclaration = Field(  # type: ignore
             ...,
             alias="in",
         )
         flow: "HintedFlowConfig"  # type: ignore
 
-    if links is not None:
-        DefaultOutputType = links | None
-    else:
-        DefaultOutputType = ContextVarPath | None
+    DefaultOutputType = ContextVarPath | None
 
     class HintedActionConfig(ActionConfig):
         flow: "HintedFlowConfig"  # type: ignore
         default_output: DefaultOutputType = None  # type: ignore
 
-    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, HintedValueDeclaration]
+    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, ValueDeclaration]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
 
     HintedActionConfig.model_rebuild()  # TODO is this necessary?

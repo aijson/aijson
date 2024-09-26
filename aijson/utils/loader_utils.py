@@ -3,12 +3,12 @@ import re
 
 import yaml
 
-from aijson.models.config.flow import ActionConfig, build_hinted_action_config
+from aijson.models.config.flow import ActionConfig, build_action_config
 
 
 def get_config_model() -> type[ActionConfig]:
     # TODO cache this so it only rebuilds when the action registry changes
-    return build_hinted_action_config()
+    return build_action_config()
 
 
 def load_config_text(config_text: str) -> ActionConfig:
