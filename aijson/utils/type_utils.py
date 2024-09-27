@@ -166,7 +166,7 @@ def transform_and_templatify_type(
 
 
 def build_type_qualified_name(
-    type_: type, *, markdown: bool, include_paths: bool
+    type_: type | types.UnionType, *, markdown: bool, include_paths: bool
 ) -> str:
     if type_ is type(None):
         return "None"

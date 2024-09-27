@@ -1,4 +1,5 @@
 # Transforming between config and action variables
+from types import UnionType
 from typing import TypeVar, Generic, Any
 
 import structlog
@@ -29,5 +30,5 @@ class TransformsFrom:  # (Generic[ConfigType]):
     """
 
     @classmethod
-    def _get_config_type(cls) -> type:  # -> type[ConfigType]:
+    def _get_config_type(cls) -> type | UnionType:  # -> type[ConfigType]:
         raise NotImplementedError
