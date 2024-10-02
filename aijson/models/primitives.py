@@ -1,5 +1,10 @@
+from typing import Literal
+
 ExecutableId = str
 ExecutableName = str
+
+# paths in the flow like `$.action1.action2`
+ExecutablePath = Literal["$"] | str
 
 TaskId = str
 
@@ -26,5 +31,6 @@ ContextVarPath = str
 # supports jinja2 templates like `{{ pull_request.title }}`
 TemplateString = str
 
-
 HintLiteral = type[str]
+
+LinkHints = dict[ExecutablePath, HintLiteral]

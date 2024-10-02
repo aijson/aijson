@@ -30,7 +30,7 @@ from aijson_ml.actions.transformer import (
 )
 from aijson.log_config import configure_logging, get_logger
 from aijson.models.blob import Blob
-from aijson.models.config.flow import build_hinted_action_config
+from aijson.models.config.flow import build_action_config
 from aijson.repos.blob_repo import (
     InMemoryBlobRepo,
     RedisBlobRepo,
@@ -291,14 +291,14 @@ def blocking_func():
     return block
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def testing_actions_type():
     # TODO assert tests not imported before this line
     import aijson.tests.resources.testing_actions  # noqa
 
     testing_action_names = list(get_actions_dict().keys())
 
-    return build_hinted_action_config(
+    return build_action_config(
         action_names=testing_action_names,
     )
 

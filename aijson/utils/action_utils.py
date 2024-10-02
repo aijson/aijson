@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import sys
+import types
 import typing
 from typing import Any, Annotated, Literal, Union, Type
 
@@ -13,7 +14,6 @@ from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
-from aijson.log_config import get_logger
 from aijson.models.config.action import (
     InternalActionBase,
     ActionInvocation,
@@ -21,11 +21,11 @@ from aijson.models.config.action import (
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
-    VarDeclaration,
-    LinkDeclaration,
 )
-from aijson.models.io import Inputs, Outputs, DefaultOutputOutputs
-from aijson.models.primitives import HintLiteral, ExecutableName
+from aijson.models.io import Inputs, Outputs
+from aijson.models.primitives import (
+    ExecutableName,
+)
 from aijson.utils.json_schema_utils import ModelNamer
 from aijson.utils.pydantic_utils import is_basemodel_subtype
 from aijson.utils.type_utils import (
@@ -38,10 +38,7 @@ from aijson.utils.type_utils import (
 def build_input_fields(
     action: type[InternalActionBase[Inputs, Outputs]],
     *,
-    vars_: HintLiteral | None,
-    links: HintLiteral | None,
-    add_union: type | None,
-    strict: bool,
+    add_union: type | types.UnionType | None = None,
     include_paths: bool,
     action_invocation: ActionInvocation | None = None,
 ) -> dict[str, tuple[type, Any]]:
@@ -102,7 +99,7 @@ def build_input_fields(
         new_field_infos[field_name] = new_field_info
 
     # templatify the input fields
-    return templatify_fields(new_field_infos, vars_, links, add_union, strict)
+    return templatify_fields(new_field_infos, add_union)
 
 
 def _get_recursive_subfields(
@@ -260,154 +257,27 @@ def build_action_description(
     return "\n\n".join(description_items)
 
 
-def build_link_literal(
-    config_filename: str,
-    strict: bool,
-    include_paths: bool,
-) -> type[str]:
-    from aijson.models.config.flow import ActionConfig, Loop
-    from aijson.utils.loader_utils import load_config_file
-
-    try:
-        # load the file not as a non-strict model
-        action_config = load_config_file(config_filename, config_model=ActionConfig)
-    except pydantic.ValidationError:
-        log = get_logger()
-        log.debug(
-            "Failed to load action config",
-            exc_info=True,
-        )
-        return str
-
-    # actions = get_actions_dict()
-    union_elements = []
-
-    if not strict:
-        union_elements.append(str)
-
-    actions_dict = get_actions_dict()
-    for action_id, action_invocation in action_config.flow.items():
-        if isinstance(action_invocation, (Loop)):
-            # TODO fixing Loop
-            continue
-        if isinstance(action_invocation, (ValueDeclaration)):
-            action_literal = Literal[action_id]  # type: ignore
-            union_elements.append(action_literal)
-            continue
-
-        # if there are any models, then each recursive subfield is a var, like jsonpath
-        # TODO support value declarations and for loops here
-        try:
-            action_type = actions_dict[action_invocation.action]
-        except KeyError:
-            continue
-        outputs_type = action_type._get_outputs_type(action_invocation)
-        base_description = build_action_description(
-            action_type,
-            action_invocation=action_invocation,
-            markdown=False,
-            include_title=True,
-            include_io=False,
-            include_paths=include_paths,
-            title_suffix=" Output",
-        )
-        base_markdown_description = build_action_description(
-            action_type,
-            action_invocation=action_invocation,
-            markdown=True,
-            include_title=True,
-            include_io=False,
-            include_paths=include_paths,
-            title_suffix=" Output",
-        )
-
-        if is_basemodel_subtype(outputs_type):
-            if issubclass(outputs_type, DefaultOutputOutputs):
-                output_attr = outputs_type._default_output
-                field = outputs_type.model_fields[output_attr]
-                annotated_field = _build_annotated_field(
-                    base_description=base_description,
-                    base_markdown_description=base_markdown_description,
-                    field=field,
-                    include_paths=include_paths,
-                    name=output_attr,
-                    alias_name=action_id,
-                )
-                union_elements.append(annotated_field)
-            union_elements.extend(
-                _get_recursive_subfields(
-                    outputs_type,
-                    base_description,
-                    base_markdown_description,
-                    include_paths=include_paths,
-                    name_prefix=f"{action_id}.",
-                )
-            )
-        else:
-            union_elements.append(
-                _build_annotated_field(
-                    base_description=base_description,
-                    base_markdown_description=base_markdown_description,
-                    field=FieldInfo(
-                        annotation=outputs_type,
-                    ),
-                    include_paths=include_paths,
-                    name=action_id,
-                )
-            )
-
-    if union_elements:
-        return Union[tuple(union_elements)]  # type: ignore
-    return str
-
-
-def build_hinted_value_declaration(
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
-    strict: bool = False,
+def build_value_declaration(
     excluded_declaration_types: None | list[type[ValueDeclaration]] = None,
 ) -> type[ValueDeclaration]:
     if excluded_declaration_types is None:
         excluded_declaration_types = []
 
-    union_elements = []
-
-    if vars_:
-        union_elements.append(
-            VarDeclaration.from_hint_literal(vars_, strict),
-        )
-    if (not vars_ or not strict) and VarDeclaration not in excluded_declaration_types:
-        union_elements.append(VarDeclaration)
-
-    if links:
-        union_elements.append(
-            LinkDeclaration.from_hint_literal(links, strict),
-        )
-    if (not links or not strict) and LinkDeclaration not in excluded_declaration_types:
-        union_elements.append(LinkDeclaration)
-
-    other_elements = [
+    union_elements = [
         element
         for element in typing.get_args(ValueDeclaration)
-        if element not in (VarDeclaration, LinkDeclaration)
-        and element not in excluded_declaration_types
+        if element not in excluded_declaration_types
     ]
-    union_elements.extend(other_elements)
 
     return Union[tuple(union_elements)]  # type: ignore
 
 
 def build_actions(
     action_names: list[str] | None = None,
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
     include_paths: bool = False,
-    strict: bool = False,
 ):
     # Dynamically build action models from currently defined actions
     # for best typehints and autocompletion possible in the jsonschema
-
-    HintedValueDeclaration = build_hinted_value_declaration(vars_, links, strict)
 
     if action_names is None:
         action_names = list(get_actions_dict().keys())
@@ -470,16 +340,13 @@ def build_actions(
                 action_literal,
                 ...,
             ),
-            "cache_key": (None | str | HintedValueDeclaration, None),
+            "cache_key": (None | str | ValueDeclaration, None),
         }
 
         # build input fields
         fields |= build_input_fields(
             action,
-            vars_=vars_,
-            links=links,
-            add_union=HintedValueDeclaration,
-            strict=strict,
+            add_union=ValueDeclaration,
             include_paths=include_paths,
         )
 

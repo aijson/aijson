@@ -23,35 +23,35 @@ sqlite = ["aiosqlite (>=0.20.0,<0.21.0)"]
 
 [[package]]
 name = "aijson-meta"
-version = "0.1.6"
+version = "0.1.9"
 description = "AI JSON Quickstart | Low-code config language for AI Pipelines"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_meta-0.1.6-py3-none-any.whl", hash = "sha256:ef63a72f9a232a13a04c120d3c240d2d48bba5edd4b1d2bcd70d9e20a04b62e0"},
-    {file = "aijson_meta-0.1.6.tar.gz", hash = "sha256:43053b0c758d8f58d3eea501bdcbd4521b92d22bb5f3f5c3859aea00e6da7a3a"},
+    {file = "aijson_meta-0.1.9-py3-none-any.whl", hash = "sha256:addeebfa51f17fcdeefd40cba12fc12de1d45142c3a88da4138b2b42cef9fa38"},
+    {file = "aijson_meta-0.1.9.tar.gz", hash = "sha256:115122c70cb5532fa7b20fdd4703ef970a36253a851901b63b4bcdbd71788e5a"},
 ]
 
 [package.dependencies]
-aijson-core = ">=0.1.11"
-aijson-db = "*"
-aijson-ml = {version = ">=0.1.4", extras = ["api"]}
-aijson-pdf = "*"
-aijson-utils = "*"
+aijson-core = ">=0.2.0,<0.3.0"
+aijson-db = ">=0.1.0,<0.2.0"
+aijson-ml = {version = ">=0.1.13,<0.2.0", extras = ["api"]}
+aijson-pdf = ">=0.1.0,<0.2.0"
+aijson-utils = ">=0.1.0,<0.2.0"
 
 [[package]]
 name = "aijson-ml"
-version = "0.1.7"
+version = "0.1.13"
 description = "AI JSON Machine Learning Actions | LLMs, transformers"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_ml-0.1.7-py3-none-any.whl", hash = "sha256:63d0401b374a8bb234b632b6884a1b27888383bf594392fc4e869d41563b9f2c"},
-    {file = "aijson_ml-0.1.7.tar.gz", hash = "sha256:95918e1ab65abaae15b87b153d6991e0017f420b083f49bfc6f1d7374401540a"},
+    {file = "aijson_ml-0.1.13-py3-none-any.whl", hash = "sha256:b99a0cb886820b5fe1245d151e8419edb2d8a1142165b69a10f99f150aad3053"},
+    {file = "aijson_ml-0.1.13.tar.gz", hash = "sha256:e890cf146e34745edd02318a61db9a22385173f4392fb3a34fbeb011faa5b153"},
 ]
 
 [package.dependencies]
-aijson-core = "*"
+aijson-core = ">=0.2.0,<0.3.0"
 anthropic = {version = ">=0.21.3,<0.22.0", optional = true, markers = "extra == \"anthropic\" or extra == \"api\" or extra == \"all\""}
 boto3 = {version = ">=1.28.57", optional = true, markers = "extra == \"api\" or extra == \"all\""}
 google-cloud-aiplatform = {version = ">=1.43.0,<2.0.0", optional = true, markers = "extra == \"gcloud\" or extra == \"api\" or extra == \"all\""}
@@ -88,18 +88,17 @@ ocr = ["ocrmypdf (>=16.2.0,<17.0.0)"]
 
 [[package]]
 name = "aijson-utils"
-version = "0.1.2"
+version = "0.1.1"
 description = "AI JSON Utilities"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_utils-0.1.2-py3-none-any.whl", hash = "sha256:28ad98cb9bc38a22865271aba20d108582aea06585e500e7471ef4c5b97b0cfb"},
-    {file = "aijson_utils-0.1.2.tar.gz", hash = "sha256:776e22c1e4a6f5a05340d26ccbc2e9fcdc690dcfe79001d32291f57efaf16695"},
+    {file = "aijson_utils-0.1.1-py3-none-any.whl", hash = "sha256:089665e99988b94f118775c1afc6bd92bca1623fa3c3b423c3b1401b54846807"},
+    {file = "aijson_utils-0.1.1.tar.gz", hash = "sha256:bbd6b5c31f7e596a2e92ab2bb331dc671e0b4e7a44f05a304fab6d272518a2b7"},
 ]
 
 [package.dependencies]
-aijson-core = ">=0.1.16,<0.2.0"
-beautifulsoup4 = ">=4.12.3,<5.0.0"
+aijson-core = "*"
 
 [[package]]
 name = "aioboto3"
@@ -523,27 +522,6 @@ files = [
 [package.dependencies]
 botocore = ">=1.11.3"
 wrapt = "*"
-
-[[package]]
-name = "beautifulsoup4"
-version = "4.12.3"
-description = "Screen-scraping library"
-optional = false
-python-versions = ">=3.6.0"
-files = [
-    {file = "beautifulsoup4-4.12.3-py3-none-any.whl", hash = "sha256:b80878c9f40111313e55da8ba20bdba06d8fa3969fc68304167741bbf9e082ed"},
-    {file = "beautifulsoup4-4.12.3.tar.gz", hash = "sha256:74e3d1928edc070d21748185c46e3fb33490f22f52a3addee9aee0f4f7781051"},
-]
-
-[package.dependencies]
-soupsieve = ">1.2"
-
-[package.extras]
-cchardet = ["cchardet"]
-chardet = ["chardet"]
-charset-normalizer = ["charset-normalizer"]
-html5lib = ["html5lib"]
-lxml = ["lxml"]
 
 [[package]]
 name = "black"
@@ -6102,17 +6080,6 @@ files = [
 ]
 
 [[package]]
-name = "soupsieve"
-version = "2.6"
-description = "A modern CSS selector implementation for Beautiful Soup."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "soupsieve-2.6-py3-none-any.whl", hash = "sha256:e72c4ff06e4fb6e4b5a9f0f55fe6e81514581fca1515028625d0f299c602ccc9"},
-    {file = "soupsieve-2.6.tar.gz", hash = "sha256:e2e68417777af359ec65daac1057404a3c8a5455bb8abc36f1a9866ab1a51abb"},
-]
-
-[[package]]
 name = "sqlalchemy"
 version = "2.0.32"
 description = "Database Abstraction Library"
@@ -8062,4 +8029,4 @@ transformers = ["infinity-emb", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6a62092ac5a7d97026785f268c9e152ad72cb677011ef37415e9a5af6dd70115"
+content-hash = "19215e87552672349d10c536a8fb533e925244c9411c9e604fc65103fe4f2fa0"

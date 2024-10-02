@@ -34,10 +34,7 @@ _transformation_cache = {}
 
 def templatify_fields(
     fields: dict[str, FieldInfo],
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
-    add_union: type | None = None,
-    strict: bool = False,
+    add_union: type | types.UnionType | None = None,
 ):
     new_fields = {}
     for field_name, field_ in fields.items():
@@ -52,7 +49,8 @@ def templatify_fields(
 
         # recurse over each field
         new_field_type = transform_and_templatify_type(
-            field_type, vars_, links, add_union, strict
+            field_type,
+            add_union,
         )
 
         # add a union to the mix
@@ -78,30 +76,20 @@ def templatify_fields(
 
 def templatify_model(
     type_: type[BaseModel],
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
-    add_union: type | None = None,
-    strict: bool = False,
+    add_union: type | types.UnionType | None = None,
 ):
     return templatify_fields(
         type_.model_fields,
-        vars_,
-        links,
         add_union,
-        strict,
     )
 
 
 def transform_and_templatify_type(
     type_: Any,
-    vars_: HintLiteral | None = None,
-    links: HintLiteral | None = None,
-    add_union: type | None = None,
-    strict: bool = False,
+    add_union: type | types.UnionType | None = None,
 ) -> Any:  # Union[type[ConfigType], type[ImplementsTransformsInContext]]:
     # cache resolved types to avoid forward references when unnecessary
-    var_string = get_var_string(vars_, strict)
-    cache_key = str((type_, var_string))
+    cache_key = str(type_)
     if cache_key in _transformation_cache:
         return _transformation_cache[cache_key]
     # cache ForwardRefs to avoid infinite recursion
@@ -116,7 +104,7 @@ def transform_and_templatify_type(
         and type_.__module__ != "builtins"
     ):
         if is_basemodel_subtype(type_):
-            name = f"{type_.__name__}_{var_string}"
+            name = f"{type_.__name__}"
             module = __name__
         else:
             name = type_.__name__
@@ -149,19 +137,13 @@ def transform_and_templatify_type(
 
     # recurse over type args if it's a type with origin
     if origin is not None:
-        args = tuple(
-            transform_and_templatify_type(arg, vars_, links, add_union, strict)
-            for arg in args
-        )
+        args = tuple(transform_and_templatify_type(arg, add_union) for arg in args)
         type_ = origin[args]  # type: ignore
     # special case pydantic models
     elif is_basemodel_subtype(type_):
         fields = templatify_model(
             type_,
-            vars_=vars_,
-            links=links,
             add_union=add_union,
-            strict=strict,
         )
         # repackage the pydantic model
         # TODO does this break anything? the module namespacing miiiight be a problem
@@ -175,11 +157,7 @@ def transform_and_templatify_type(
 
     # resolve TransformsFrom
     if is_subtype(type_, TransformsFrom):
-        type_ = type_._get_config_type(
-            vars_=vars_,
-            links=links,
-            strict=strict,
-        )
+        type_ = type_._get_config_type()
 
     if is_optional:
         type_ = Union[type_, None]
@@ -188,7 +166,7 @@ def transform_and_templatify_type(
 
 
 def build_type_qualified_name(
-    type_: type, *, markdown: bool, include_paths: bool
+    type_: type | types.UnionType, *, markdown: bool, include_paths: bool
 ) -> str:
     if type_ is type(None):
         return "None"
@@ -225,7 +203,7 @@ def build_type_qualified_name(
     # handle TransformsFrom
     if is_subtype(type_, TransformsFrom):
         return build_type_qualified_name(
-            type_._get_config_type(None, None),
+            type_._get_config_type(),
             markdown=markdown,
             include_paths=include_paths,
         )

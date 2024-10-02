@@ -5,13 +5,13 @@ import os
 from pydantic import TypeAdapter
 
 from aijson.models.config.flow import (
-    build_hinted_action_config,
+    build_action_config,
 )
 from aijson.utils.action_utils import (
-    build_link_literal,
     get_actions_dict,
     import_custom_actions,
 )
+from aijson.utils.hint_utils import build_link_hints
 
 
 def _build_aijson_schema(
@@ -19,35 +19,32 @@ def _build_aijson_schema(
     include_paths: bool,
     strict: bool,
     config_filename: str | None = None,
-    link_hint_literal_name: str = "__LinkHintLiteral",
+    link_hint_literal_base: str = "__LinkHintLiteral",
 ):
     if config_filename:
-        link_hint_literal = build_link_literal(
+        link_hints = build_link_hints(
             config_filename=config_filename,
             strict=strict,
             include_paths=include_paths,
         )
     else:
-        link_hint_literal = None
+        link_hints = None
 
-    HintedActionConfig = build_hinted_action_config(
+    HintedActionConfig = build_action_config(
         action_names=action_names,
-        links=link_hint_literal,
-        vars_=None,
         include_paths=include_paths,
-        strict=strict,
     )
     workflow_schema = HintedActionConfig.model_json_schema()
 
-    if link_hint_literal is not None:
+    if link_hints is not None:
         definitions = workflow_schema["$defs"]
-        if link_hint_literal_name in definitions:
-            raise ValueError(
-                f"Link hint literal name `{link_hint_literal_name}` already exists in definitions"
-            )
-        definitions[link_hint_literal_name] = TypeAdapter(
-            link_hint_literal
-        ).json_schema()
+        for executable_path, hint in link_hints.items():
+            hint_name = f"{link_hint_literal_base}_{executable_path}"
+            if hint_name in definitions:
+                raise ValueError(
+                    f"Link hint literal name `{hint_name}` already exists in definitions"
+                )
+            definitions[hint_name] = TypeAdapter(hint).json_schema()
 
     return workflow_schema
 

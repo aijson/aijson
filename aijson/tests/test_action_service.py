@@ -101,7 +101,7 @@ def assert_logs(
 
         if guessed_llm:
             log_dict = log_list.pop(0)
-            assert log_dict["event"] == "Guessed what language model to use"
+            assert log_dict["event"] == "Guessed default language model"
             assert log_dict["action"] == action_name
             assert log_dict["action_id"] == action_id
             assert log_dict["log_level"] == "info"
