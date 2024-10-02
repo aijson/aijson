@@ -88,18 +88,17 @@ ocr = ["ocrmypdf (>=16.2.0,<17.0.0)"]
 
 [[package]]
 name = "aijson-utils"
-version = "0.1.2"
+version = "0.1.1"
 description = "AI JSON Utilities"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "aijson_utils-0.1.2-py3-none-any.whl", hash = "sha256:28ad98cb9bc38a22865271aba20d108582aea06585e500e7471ef4c5b97b0cfb"},
-    {file = "aijson_utils-0.1.2.tar.gz", hash = "sha256:776e22c1e4a6f5a05340d26ccbc2e9fcdc690dcfe79001d32291f57efaf16695"},
+    {file = "aijson_utils-0.1.1-py3-none-any.whl", hash = "sha256:089665e99988b94f118775c1afc6bd92bca1623fa3c3b423c3b1401b54846807"},
+    {file = "aijson_utils-0.1.1.tar.gz", hash = "sha256:bbd6b5c31f7e596a2e92ab2bb331dc671e0b4e7a44f05a304fab6d272518a2b7"},
 ]
 
 [package.dependencies]
-aijson-core = ">=0.1.16,<0.2.0"
-beautifulsoup4 = ">=4.12.3,<5.0.0"
+aijson-core = "*"
 
 [[package]]
 name = "aioboto3"
@@ -523,27 +522,6 @@ files = [
 [package.dependencies]
 botocore = ">=1.11.3"
 wrapt = "*"
-
-[[package]]
-name = "beautifulsoup4"
-version = "4.12.3"
-description = "Screen-scraping library"
-optional = false
-python-versions = ">=3.6.0"
-files = [
-    {file = "beautifulsoup4-4.12.3-py3-none-any.whl", hash = "sha256:b80878c9f40111313e55da8ba20bdba06d8fa3969fc68304167741bbf9e082ed"},
-    {file = "beautifulsoup4-4.12.3.tar.gz", hash = "sha256:74e3d1928edc070d21748185c46e3fb33490f22f52a3addee9aee0f4f7781051"},
-]
-
-[package.dependencies]
-soupsieve = ">1.2"
-
-[package.extras]
-cchardet = ["cchardet"]
-chardet = ["chardet"]
-charset-normalizer = ["charset-normalizer"]
-html5lib = ["html5lib"]
-lxml = ["lxml"]
 
 [[package]]
 name = "black"
@@ -6099,17 +6077,6 @@ python-versions = ">=3.7"
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
-]
-
-[[package]]
-name = "soupsieve"
-version = "2.6"
-description = "A modern CSS selector implementation for Beautiful Soup."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "soupsieve-2.6-py3-none-any.whl", hash = "sha256:e72c4ff06e4fb6e4b5a9f0f55fe6e81514581fca1515028625d0f299c602ccc9"},
-    {file = "soupsieve-2.6.tar.gz", hash = "sha256:e2e68417777af359ec65daac1057404a3c8a5455bb8abc36f1a9866ab1a51abb"},
 ]
 
 [[package]]
