@@ -75,7 +75,7 @@ jsonschema = "^4.21.0"
 jinja2schema = {git = "https://github.com/irgolic/jinja2schema.git", branch = "master"}
 moto = {extras = ["server"], version = "^4.2.13"}
 aiosqlite = "^0.20.0"
-aijson-meta = ">=0.1.6"
+aijson-meta = "^0.1.9"
 mock-firestore-async = "^0.11.3"
 
 [build-system]
