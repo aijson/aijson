@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Any, Optional, Union, Literal
 
 from pydantic import Field
 
@@ -8,7 +8,7 @@ from aijson.models.config.action import (
 from aijson.models.config.common import StrictModel
 from aijson.models.config.model import OptionalModelConfig
 from aijson.utils.type_utils import transform_and_templatify_type
-from aijson.models.config.value_declarations import ValueDeclaration
+from aijson.models.config.value_declarations import FlowDeclaration, ValueDeclaration
 from aijson.models.primitives import (
     ContextVarName,
     ContextVarPath,
@@ -55,6 +55,7 @@ class ActionConfig(StrictModel):
     action_timeout: float = 360
     flow: "FlowConfig"
     default_output: ContextVarPath | None = None  # TODO `| ValueDeclaration`
+    name: str | None = None
 
     def get_default_output(self) -> ContextVarPath:
         if self.default_output is not None:
@@ -95,7 +96,7 @@ def build_action_config(
         flow: "HintedFlowConfig"  # type: ignore
         default_output: DefaultOutputType = None  # type: ignore
 
-    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, ValueDeclaration]
+    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, ValueDeclaration, FlowDeclaration]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
 
     HintedActionConfig.model_rebuild()  # TODO is this necessary?

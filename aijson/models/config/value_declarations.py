@@ -243,6 +243,18 @@ You can also use list comprehension and conditionals:
         )
         return evaluator.eval(self.lambda_)
 
+class FlowDeclaration(Declaration):
+    flow_name: str | None = None
+
+    def get_dependencies(self) -> set[ContextVarName]:
+        raise NotImplementedError
+
+    async def render(self, context: dict[str, Any]) -> Any:
+        raise NotImplementedError
+
+    @classmethod
+    def from_hint_literal(cls, hint_literal: HintLiteral, strict: bool) -> type[Self]:
+        return cls
 
 ValueDeclaration = Union[
     TextDeclaration,
