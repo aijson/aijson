@@ -20,6 +20,7 @@ from aijson.models.config.action import (
     ActionMeta,
 )
 from aijson.models.config.value_declarations import (
+    FlowDeclaration,
     ValueDeclaration,
 )
 from aijson.models.io import Inputs, Outputs
@@ -347,6 +348,12 @@ def build_actions(
         fields |= build_input_fields(
             action,
             add_union=ValueDeclaration,
+            include_paths=include_paths,
+        )
+
+        fields |= build_input_fields(
+            action,
+            add_union=Union[FlowDeclaration], # type: ignore
             include_paths=include_paths,
         )
 

@@ -8,7 +8,7 @@ from aijson.models.config.action import (
 from aijson.models.config.common import StrictModel
 from aijson.models.config.model import OptionalModelConfig
 from aijson.utils.type_utils import transform_and_templatify_type
-from aijson.models.config.value_declarations import FlowDeclaration, ValueDeclaration
+from aijson.models.config.value_declarations import  ValueDeclaration
 from aijson.models.primitives import (
     ContextVarName,
     ContextVarPath,
@@ -96,7 +96,7 @@ def build_action_config(
         flow: "HintedFlowConfig"  # type: ignore
         default_output: DefaultOutputType = None  # type: ignore
 
-    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, ValueDeclaration, FlowDeclaration]
+    HintedExecutable = Union[ActionInvocationUnion, HintedLoop, ValueDeclaration]
     HintedFlowConfig = dict[ExecutableId, HintedExecutable]
 
     HintedActionConfig.model_rebuild()  # TODO is this necessary?
