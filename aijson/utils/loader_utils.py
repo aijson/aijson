@@ -54,7 +54,7 @@ def extend_actions_dict(aijson_document: str | None) -> dict[str, ActionConfig]:
             if os.path.isdir(full_path):
                 aijson_documents = check_dir(full_path, aijson_documents)
             elif os.path.isfile(full_path):
-                if full_path.endswith("ai.json") or full_path.endswith("ai.yaml"):
+                if full_path.endswith(".ai.json") or full_path.endswith(".ai.yaml"):
                     config = load_config_file(full_path, config_model=ActionConfig)
                     try:
                         aijson_documents[full_path] = config

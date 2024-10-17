@@ -2,7 +2,7 @@ from typing import Literal, Union
 from typing_extensions import assert_never
 
 import pydantic
-from aijson.models.config.flow import ActionConfig, Executable, FlowInvocation, Loop
+from aijson.models.config.flow import ActionConfig, Executable, Loop
 from aijson.utils.action_utils import (
     get_actions_dict,
     build_action_description,
@@ -162,9 +162,6 @@ def build_link_hints(
                         )
                     )
                 namespace_items[executable_id] = Union[tuple(action_literal_items)]  # type: ignore
-
-            elif isinstance(executable_invocation, FlowInvocation):
-                continue
 
             else:
                 assert_never(executable_invocation)

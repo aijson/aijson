@@ -5,7 +5,7 @@ from pydantic import Field
 from aijson.models.config.action import (
     ActionInvocation,
 )
-from aijson.models.config.common import ExtraModel, StrictModel
+from aijson.models.config.common import StrictModel
 from aijson.models.config.model import OptionalModelConfig
 from aijson.utils.type_utils import transform_and_templatify_type
 from aijson.models.config.value_declarations import ValueDeclaration
@@ -13,17 +13,12 @@ from aijson.models.primitives import (
     ContextVarName,
     ContextVarPath,
     ExecutableId,
-    FlowName,
 )
 from aijson.utils.action_utils import build_value_declaration, build_actions
 from aijson.models.config.value_declarations import (
     LinkDeclaration,
     LambdaDeclaration,
 )
-
-
-class FlowInvocation(ExtraModel):
-    flow_name: FlowName | None = None
 
 
 class Loop(StrictModel):
@@ -69,7 +64,7 @@ class ActionConfig(StrictModel):
         return list(self.flow.keys())[-1]
 
 
-Executable = Union[ActionInvocation, Loop, ValueDeclaration, FlowInvocation]
+Executable = Union[ActionInvocation, Loop, ValueDeclaration]
 FlowConfig = dict[ExecutableId, Executable]
 
 
