@@ -9,19 +9,18 @@ from aijson.utils.action_utils import (
     _build_annotated_field,
     _get_recursive_subfields,
 )
-from aijson.utils.loader_utils import extend_actions_dict, load_config_file
+from aijson.utils.loader_utils import load_config_file
 
 from pydantic.fields import FieldInfo
 
 from aijson.log_config import get_logger
 from aijson.models.config.action import (
-    Action,
     ActionInvocation,
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
 )
-from aijson.models.io import BaseModel, DefaultOutputOutputs
+from aijson.models.io import DefaultOutputOutputs
 from aijson.models.primitives import (
     ExecutableId,
     HintLiteral,
@@ -39,7 +38,6 @@ def build_link_hints(
     Builds a dictionary mapping namespace paths in the flow (including subflows)
     to hint literals of possible link values.
     """
-    all_configs = extend_actions_dict(config_filename)
 
     try:
         # load the file not as a non-strict model
@@ -53,25 +51,6 @@ def build_link_hints(
         return {}
 
     actions_dict = get_actions_dict()
-    for config in all_configs:
-        item = all_configs[config]
-        if item:
-            if item.name is None:
-                continue
-
-            class InputsModel(BaseModel):
-                pass
-
-            class OutputsModel(BaseModel):
-                pass
-
-            class Cl(Action[InputsModel, OutputsModel]):
-                name = item.name
-                log = ""
-                strict = True
-
-            actions_dict[item.name] = Cl(get_logger(), "")
-            # actions_dict[item.name] = all_configs[config]
 
     def build(
         flow: dict[ExecutableId, Executable],
