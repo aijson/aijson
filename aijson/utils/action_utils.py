@@ -9,20 +9,23 @@ import typing
 from typing import Any, Annotated, Literal, Union, Type
 
 import pydantic
-from pydantic import Field, ConfigDict
+from pydantic import Field, ConfigDict, create_model
 from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
+from aijson.log_config import get_logger
 from aijson.models.config.action import (
+    Action,
     InternalActionBase,
     ActionInvocation,
     ActionMeta,
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
+    VarDeclaration,
 )
-from aijson.models.io import Inputs, Outputs
+from aijson.models.io import BaseModel, Inputs, Outputs
 from aijson.models.primitives import (
     ExecutableName,
 )
@@ -457,9 +460,10 @@ def import_custom_actions(path: str):
 
 
 def get_actions_dict(
-    entrypoint_whitelist: list[str] | None = None,
+    entrypoint_whitelist: list[str] | None = None, aijson_document: str | None = None
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
+    from aijson.utils.loader_utils import extend_actions_dict
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -474,6 +478,42 @@ def get_actions_dict(
             recursive_import(entrypoint.value)
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
+
+    if aijson_document is not None:
+        all_configs = extend_actions_dict(aijson_document)
+        for config in all_configs:
+            config = all_configs.get(config)
+            if config is None:
+                continue
+            if config.name is None:
+                continue
+
+            class OutputsModel(BaseModel):
+                pass
+
+            target_output = config.get_default_output()
+
+            declaration = VarDeclaration(
+                var=target_output,
+            )
+
+            dependencies = declaration.get_dependencies()
+            field_definitions = {}
+            for dependency in dependencies:
+                field_definitions[dependency] = (str, ...)
+
+            InputsModel = create_model(
+                config.name,
+                model_config=ConfigDict(
+                    arbitrary_types_allowed=True,
+                ),
+                **field_definitions,
+            )
+
+            class Cl(Action[InputsModel, OutputsModel]):
+                name = config.name
+
+            Cl(get_logger(), "")
 
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
