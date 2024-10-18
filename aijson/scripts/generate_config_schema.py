@@ -86,7 +86,7 @@ if __name__ == "__main__":
         import_custom_actions(".")
 
     if args.flow:
-        action_names = list(get_actions_dict().keys())
+        action_names = list(get_actions_dict(aijson_document=args.flow).keys())
 
         schema = _build_aijson_schema(
             action_names=action_names,
@@ -107,12 +107,12 @@ if __name__ == "__main__":
         except Exception:
             pass
     else:
-        action_names = list(get_actions_dict().keys())
+        action_names = list(get_actions_dict(aijson_document=args.flow).keys())
 
         # TODO assert tests not imported before this line
         import aijson.tests.resources.testing_actions  # noqa
 
-        testing_action_names = list(get_actions_dict().keys())
+        testing_action_names = list(get_actions_dict(aijson_document=args.flow).keys())
 
         # build default action and test action schemas
         _build_and_save_aijson_schema(
