@@ -479,7 +479,7 @@ def get_actions_dict(
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
 
-    if aijson_document is not None:
+    if aijson_document is not None and ActionMeta.check_subflows is False:
         all_configs = extend_actions_dict(aijson_document)
         for config in all_configs:
             config = all_configs.get(config)
@@ -514,6 +514,7 @@ def get_actions_dict(
                 name = config.name
 
             Cl(get_logger(), "")
+        ActionMeta.check_subflows = True
 
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry

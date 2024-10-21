@@ -57,7 +57,8 @@ def extend_actions_dict(aijson_document: str | None) -> dict[str, ActionConfig]:
                 if full_path.endswith(".ai.json") or full_path.endswith(".ai.yaml"):
                     config = load_config_file(full_path, config_model=ActionConfig)
                     try:
-                        aijson_documents[full_path] = config
+                        if config.name:
+                            aijson_documents[full_path] = config
                     except pydantic.ValidationError:
                         continue
         return aijson_documents
