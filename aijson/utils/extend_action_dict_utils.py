@@ -4,13 +4,8 @@ import pydantic
 from aijson.flow import Flow
 
 
-def extend_actions_dict(aijson_document: str | None) -> dict[str, Flow]:
+def extend_actions_dict() -> dict[str, Flow]:
     aijson_documents: dict[str, Flow] = {}
-    if aijson_document is None:
-        return aijson_documents
-
-    current_dir = os.path.abspath(os.path.dirname(aijson_document))
-    current_dir = os.path.join(current_dir)
 
     def check_dir(dir: str, aijson_documents: dict[str, Flow]) -> dict[str, Flow]:
         for item in os.listdir(dir):
@@ -28,4 +23,4 @@ def extend_actions_dict(aijson_document: str | None) -> dict[str, Flow]:
                         continue
         return aijson_documents
 
-    return check_dir(current_dir, aijson_documents)
+    return check_dir(".", aijson_documents)

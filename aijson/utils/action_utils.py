@@ -393,7 +393,8 @@ def recursive_import(package_name):
 
 
 _processed_entrypoints = set()
-
+_processed_subflows = set()
+_processing_subflows = False
 
 def file_contains_action_import(filepath: str):
     if not filepath.endswith(".py"):
@@ -460,9 +461,13 @@ def import_custom_actions(path: str):
 
 
 def get_actions_dict(
-    entrypoint_whitelist: list[str] | None = None, aijson_document: str | None = None
-) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
+    entrypoint_whitelist: list[str] | None = None) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
+    global _processing_subflows
+
+    # global _processing_subflows
+
+
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -478,17 +483,21 @@ def get_actions_dict(
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
 
-    if aijson_document is not None and ActionMeta.check_subflows is False:
+    if len(_processed_subflows) == 0 and _processing_subflows == False:
+        _processing_subflows = True
         from aijson.utils.extend_action_dict_utils import extend_actions_dict
-
-        all_flows = extend_actions_dict(aijson_document)
+        all_flows = extend_actions_dict()
         for flow in all_flows:
+
             flow = all_flows.get(flow)
             if flow is None:
                 continue
             if flow.action_config.name is None:
                 continue
+            if flow.action_config.name in _processed_subflows:
+                continue
 
+            _processed_subflows.add(flow.action_config.name)
             outputs_type = None
             for _, invocation in flow.action_config.flow.items():
                 if isinstance(invocation, ActionInvocation):
@@ -519,7 +528,6 @@ def get_actions_dict(
                 name = flow.action_config.name
 
             Cl(get_logger(), "")
-        ActionMeta.check_subflows = True
 
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry

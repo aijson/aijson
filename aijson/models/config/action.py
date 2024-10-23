@@ -33,8 +33,6 @@ class ActionMeta(type):
     """
 
     actions_registry: dict[ExecutableName, Type["InternalActionBase"]] = {}
-    check_subflows = False
-
     def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict[str, Any]):
         cls = super().__new__(mcs, name, bases, attrs)
         if name in ("InternalActionBase", "Action", "StreamingAction"):
