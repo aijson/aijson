@@ -23,7 +23,6 @@ from aijson.models.config.action import (
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
-    VarDeclaration,
 )
 from aijson.models.io import Inputs, Outputs
 from aijson.models.primitives import (
@@ -396,6 +395,7 @@ _processed_entrypoints = set()
 _processed_subflows = set()
 _processing_subflows = False
 
+
 def file_contains_action_import(filepath: str):
     if not filepath.endswith(".py"):
         return False
@@ -461,13 +461,14 @@ def import_custom_actions(path: str):
 
 
 def get_actions_dict(
-    entrypoint_whitelist: list[str] | None = None) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
+    entrypoint_whitelist: list[str] | None = None,
+) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
+    from aijson.utils.static_utils import get_config_variables
+
     global _processing_subflows
 
     # global _processing_subflows
-
-
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -486,9 +487,9 @@ def get_actions_dict(
     if len(_processed_subflows) == 0 and _processing_subflows == False:
         _processing_subflows = True
         from aijson.utils.extend_action_dict_utils import extend_actions_dict
+
         all_flows = extend_actions_dict()
         for flow in all_flows:
-
             flow = all_flows.get(flow)
             if flow is None:
                 continue
@@ -505,13 +506,8 @@ def get_actions_dict(
                     action_type = ActionMeta.actions_registry[name]
                     outputs_type = action_type._get_outputs_type(None)
 
-            target_output = flow.action_config.get_default_output()
+            dependencies = get_config_variables(flow.action_config)
 
-            declaration = VarDeclaration(
-                var=target_output,
-            )
-
-            dependencies = declaration.get_dependencies()
             field_definitions = {}
             for dependency in dependencies:
                 field_definitions[dependency] = (str, ...)
