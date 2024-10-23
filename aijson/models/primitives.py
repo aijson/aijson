@@ -34,3 +34,5 @@ TemplateString = str
 HintLiteral = type[str]
 
 LinkHints = dict[ExecutablePath, HintLiteral]
+
+FlowName = str

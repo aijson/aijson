@@ -9,12 +9,14 @@ import typing
 from typing import Any, Annotated, Literal, Union, Type
 
 import pydantic
-from pydantic import Field, ConfigDict
+from pydantic import Field, ConfigDict, create_model
 from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
+from aijson.log_config import get_logger
 from aijson.models.config.action import (
+    Action,
     InternalActionBase,
     ActionInvocation,
     ActionMeta,
@@ -390,6 +392,8 @@ def recursive_import(package_name):
 
 
 _processed_entrypoints = set()
+_processed_subflows = set()
+_processing_subflows = False
 
 
 def file_contains_action_import(filepath: str):
@@ -460,6 +464,11 @@ def get_actions_dict(
     entrypoint_whitelist: list[str] | None = None,
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
+    from aijson.utils.static_utils import get_config_variables
+
+    global _processing_subflows
+
+    # global _processing_subflows
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -474,6 +483,47 @@ def get_actions_dict(
             recursive_import(entrypoint.value)
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
+
+    if len(_processed_subflows) == 0 and _processing_subflows == False:
+        _processing_subflows = True
+        from aijson.utils.extend_action_dict_utils import extend_actions_dict
+
+        all_flows = extend_actions_dict()
+        for flow in all_flows:
+            flow = all_flows.get(flow)
+            if flow is None:
+                continue
+            if flow.action_config.name is None:
+                continue
+            if flow.action_config.name in _processed_subflows:
+                continue
+
+            _processed_subflows.add(flow.action_config.name)
+            outputs_type = None
+            for _, invocation in flow.action_config.flow.items():
+                if isinstance(invocation, ActionInvocation):
+                    name = invocation.action
+                    action_type = ActionMeta.actions_registry[name]
+                    outputs_type = action_type._get_outputs_type(None)
+
+            dependencies = get_config_variables(flow.action_config)
+
+            field_definitions = {}
+            for dependency in dependencies:
+                field_definitions[dependency] = (str, ...)
+
+            InputsModel = create_model(
+                flow.action_config.name,
+                model_config=ConfigDict(
+                    arbitrary_types_allowed=True,
+                ),
+                **field_definitions,
+            )
+
+            class Cl(Action[InputsModel, outputs_type]):
+                name = flow.action_config.name
+
+            Cl(get_logger(), "")
 
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
