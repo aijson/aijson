@@ -25,7 +25,7 @@ from aijson.models.config.value_declarations import (
     ValueDeclaration,
     VarDeclaration,
 )
-from aijson.models.io import BaseModel, Inputs, Outputs
+from aijson.models.io import Inputs, Outputs
 from aijson.models.primitives import (
     ExecutableName,
 )
@@ -463,7 +463,6 @@ def get_actions_dict(
     entrypoint_whitelist: list[str] | None = None, aijson_document: str | None = None
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
-    from aijson.utils.loader_utils import extend_actions_dict
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -480,18 +479,24 @@ def get_actions_dict(
             print(f"Failed to import {dist_name} entrypoint: {e}")
 
     if aijson_document is not None and ActionMeta.check_subflows is False:
-        all_configs = extend_actions_dict(aijson_document)
-        for config in all_configs:
-            config = all_configs.get(config)
-            if config is None:
+        from aijson.utils.extend_action_dict_utils import extend_actions_dict
+
+        all_flows = extend_actions_dict(aijson_document)
+        for flow in all_flows:
+            flow = all_flows.get(flow)
+            if flow is None:
                 continue
-            if config.name is None:
+            if flow.action_config.name is None:
                 continue
 
-            class OutputsModel(BaseModel):
-                pass
+            outputs_type = None
+            for _, invocation in flow.action_config.flow.items():
+                if isinstance(invocation, ActionInvocation):
+                    name = invocation.action
+                    action_type = ActionMeta.actions_registry[name]
+                    outputs_type = action_type._get_outputs_type(None)
 
-            target_output = config.get_default_output()
+            target_output = flow.action_config.get_default_output()
 
             declaration = VarDeclaration(
                 var=target_output,
@@ -503,15 +508,15 @@ def get_actions_dict(
                 field_definitions[dependency] = (str, ...)
 
             InputsModel = create_model(
-                config.name,
+                flow.action_config.name,
                 model_config=ConfigDict(
                     arbitrary_types_allowed=True,
                 ),
                 **field_definitions,
             )
 
-            class Cl(Action[InputsModel, OutputsModel]):
-                name = config.name
+            class Cl(Action[InputsModel, outputs_type]):
+                name = flow.action_config.name
 
             Cl(get_logger(), "")
         ActionMeta.check_subflows = True
