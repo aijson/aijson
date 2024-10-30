@@ -4,7 +4,6 @@ from typing import Any, AsyncIterator
 
 import jinja2
 
-from aijson.models.config.action import ActionMeta
 from aijson.models.config.flow import ActionConfig
 from aijson.services.action_service import ActionService
 
