@@ -11,8 +11,7 @@ def extend_actions_dict() -> dict[str, Flow]:
         for item in os.listdir(dir):
             full_path = os.path.join(dir, item)
             if os.path.isdir(full_path):
-                continue
-                # aijson_documents = check_dir(full_path, aijson_documents)
+                aijson_documents = check_dir(full_path, aijson_documents)
             elif os.path.isfile(full_path):
                 if full_path.endswith(".ai.json") or full_path.endswith(".ai.yaml"):
                     try:

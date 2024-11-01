@@ -538,12 +538,14 @@ def get_actions_dict(
 
                 class streaming_action(StreamingAction[InputsModel, outputs_type]):
                     name = flow.action_config.name
+                    target = target_output
+                    subflow = flow
 
                     async def run(self, inputs) -> AsyncIterator[Any]:
                         if flow is not None:
                             args = _prepare_kwargs(inputs)
-                            new_flow = flow.set_vars(**args)
-                            run = new_flow.stream(target_output)
+                            new_flow = self.subflow.set_vars(**args)
+                            run = new_flow.stream(self.target)
                             async for i in run:
                                 yield i
 
@@ -552,12 +554,14 @@ def get_actions_dict(
 
                 class action(Action[InputsModel, outputs_type]):
                     name = flow.action_config.name
+                    target = target_output
+                    subflow = flow
 
                     async def run(self, inputs):
                         if flow is not None:
                             args = _prepare_kwargs(inputs)
-                            new_flow = flow.set_vars(**args)
-                            return new_flow.run(target_output)
+                            new_flow = self.subflow.set_vars(**args)
+                            return await new_flow.run(self.target)
 
                 action(get_logger(), "")
     # return all subclasses of Action as registered in the metaclass
