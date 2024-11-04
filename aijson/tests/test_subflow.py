@@ -10,3 +10,12 @@ async def test_basic_subflow(log_history):
     output = await flow.run()
     assert all(log_["log_level"] != "error" for log_ in log_history)
     assert output == expectedOutput
+
+
+async def test_subflow_result(log_history):
+    config = load_config_file("aijson/tests/resources/use_subflow_result.ai.yaml")
+    flow = Flow(config)
+    expectedOutput = 3
+    output = await flow.run()
+    assert all(log_["log_level"] != "error" for log_ in log_history)
+    assert output == expectedOutput

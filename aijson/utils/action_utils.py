@@ -23,6 +23,7 @@ from aijson.models.config.action import (
     StreamingAction,
 )
 from aijson.models.config.value_declarations import (
+    LinkDeclaration,
     ValueDeclaration,
 )
 from aijson.models.func import _prepare_kwargs
@@ -488,6 +489,33 @@ def get_actions_dict(
 
     if not _processing_subflows:
         from aijson.utils.extend_action_dict_utils import extend_actions_dict
+        from aijson.models.config.flow import Executable
+        from aijson.flow import Flow
+
+        def _get_action_invocation(invocation: Executable, flow: Flow) -> tuple[type[Action]|type[StreamingAction], type] | None:
+            if isinstance(invocation, ActionInvocation):
+                name = invocation.action
+                action_type = ActionMeta.actions_registry.get(name)
+                if action_type is None:
+                    return None
+                outputs_type = action_type._get_outputs_type(None)
+                _type = None
+                if issubclass(action_type, Action):
+                    _type = Action
+                elif issubclass(action_type, StreamingAction):
+                    _type = StreamingAction
+                else:
+                    return None
+                return (_type, outputs_type)
+            elif isinstance(invocation, ValueDeclaration):
+                dependencies = invocation.get_dependencies()
+                if len(dependencies) >= 0:
+                    first = flow.action_config.flow.get(list(dependencies)[0])
+                    if first is None:
+                        return None
+                    return _get_action_invocation(first, flow)
+            return None
+        
 
         _processing_subflows = True
         all_subflows = extend_actions_dict()
@@ -499,7 +527,6 @@ def get_actions_dict(
                 continue
             if flow.action_config.name in _processed_subflows:
                 continue
-
             _processed_subflows.add(flow.action_config.name)
             outputs_type = None
             _type = None
@@ -507,15 +534,10 @@ def get_actions_dict(
             invocation = flow.action_config.flow.get(target_output)
             if invocation is None:
                 continue
-            if isinstance(invocation, ActionInvocation):
-                name = invocation.action
-                action_type = ActionMeta.actions_registry[name]
-                outputs_type = action_type._get_outputs_type(None)
-                if issubclass(action_type, Action):
-                    _type = Action
-                elif issubclass(action_type, StreamingAction):
-                    _type = StreamingAction
-
+            action_invocation = _get_action_invocation(invocation, flow)
+            if action_invocation is None:
+                continue
+            _type, outputs_type = action_invocation
             if _type is None:
                 continue
 
@@ -566,3 +588,6 @@ def get_actions_dict(
                 action(get_logger(), "")
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
+
+
+           
