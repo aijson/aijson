@@ -1,0 +1,8 @@
+version: "0.1"
+name: hello_flow
+default_model:
+  model: hi
+flow:
+  hello:
+    action: llm
+    prompt: say {{ smth }} for me

@@ -492,7 +492,9 @@ def get_actions_dict(
         from aijson.models.config.flow import Executable
         from aijson.flow import Flow
 
-        def _get_action_invocation(invocation: Executable, flow: Flow) -> tuple[type[Action]|type[StreamingAction], type] | None:
+        def _get_action_invocation(
+            invocation: Executable, flow: Flow
+        ) -> tuple[type[Action] | type[StreamingAction], type] | None:
             if isinstance(invocation, ActionInvocation):
                 name = invocation.action
                 action_type = ActionMeta.actions_registry.get(name)
@@ -515,7 +517,6 @@ def get_actions_dict(
                         return None
                     return _get_action_invocation(first, flow)
             return None
-        
 
         _processing_subflows = True
         all_subflows = extend_actions_dict()
@@ -564,11 +565,11 @@ def get_actions_dict(
                     subflow = flow
 
                     async def run(self, inputs) -> AsyncIterator[Any]:
-                        if flow is not None:
+                        if self.subflow is not None:
                             args = _prepare_kwargs(inputs)
                             new_flow = self.subflow.set_vars(**args)
-                            run = new_flow.stream(self.target)
-                            async for i in run:
+                            stream = new_flow.stream(self.target)
+                            async for i in stream:
                                 yield i
 
                 streaming_action(get_logger(), "")
@@ -580,7 +581,7 @@ def get_actions_dict(
                     subflow = flow
 
                     async def run(self, inputs):
-                        if flow is not None:
+                        if self.subflow is not None:
                             args = _prepare_kwargs(inputs)
                             new_flow = self.subflow.set_vars(**args)
                             return await new_flow.run(self.target)
@@ -588,6 +589,3 @@ def get_actions_dict(
                 action(get_logger(), "")
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
-
-
-           
