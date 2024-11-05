@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from aijson_ml.actions.llm import Prompt
+from aijson_ml.actions.llm import Inputs, Prompt
 from aijson import Flow
 from aijson.tests.resources.testing_actions import AddOutputs
 from aijson.utils.loader_utils import load_config_file
@@ -28,9 +28,14 @@ async def test_prompt_subflow(log_history):
     config = load_config_file("aijson/tests/resources/use_prompt_subflow.ai.yaml")
     flow = Flow(config)
 
-    with patch.object(Prompt, "run"):
+    outputs = "Hello! How can I assist you today?"
+
+    async def run(self, inputs: Inputs):
+        assert inputs._default_model.model == "hi"
+        yield outputs
+
+    with patch.object(Prompt, "run", new=run):
         outputs = await flow.run()
-        print(outputs)
 
     assert all(log_["log_level"] != "error" for log_ in log_history)
     # assert output == expectedOutput

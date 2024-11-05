@@ -23,7 +23,6 @@ from aijson.models.config.action import (
     StreamingAction,
 )
 from aijson.models.config.value_declarations import (
-    LinkDeclaration,
     ValueDeclaration,
 )
 from aijson.models.func import _prepare_kwargs
