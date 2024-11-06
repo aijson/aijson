@@ -6,25 +6,23 @@ from aijson.tests.resources.testing_actions import AddOutputs
 from aijson.utils.loader_utils import load_config_file
 
 
-async def test_basic_subflow(log_history):
+async def test_basic_subflow(assert_no_errors):
     config = load_config_file("aijson/tests/resources/use_basic_subflow.ai.yaml")
     flow = Flow(config)
     expectedOutput = AddOutputs(result=3)
     output = await flow.run()
-    assert all(log_["log_level"] != "error" for log_ in log_history)
     assert output == expectedOutput
 
 
-async def test_subflow_result(log_history):
+async def test_subflow_result(assert_no_errors):
     config = load_config_file("aijson/tests/resources/use_subflow_result.ai.yaml")
     flow = Flow(config)
     expectedOutput = 3
     output = await flow.run()
-    assert all(log_["log_level"] != "error" for log_ in log_history)
     assert output == expectedOutput
 
 
-async def test_prompt_subflow(log_history):
+async def test_prompt_subflow(assert_no_errors):
     config = load_config_file("aijson/tests/resources/use_prompt_subflow.ai.yaml")
     flow = Flow(config)
 
@@ -36,6 +34,3 @@ async def test_prompt_subflow(log_history):
 
     with patch.object(Prompt, "run", new=run):
         outputs = await flow.run()
-
-    assert all(log_["log_level"] != "error" for log_ in log_history)
-    # assert output == expectedOutput

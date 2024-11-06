@@ -6,26 +6,22 @@ import os
 import sys
 import types
 import typing
-from typing import Any, Annotated, AsyncIterator, Literal, Union, Type
+from typing import Any, Annotated, Literal, Union, Type
 
 import pydantic
-from pydantic import Field, ConfigDict, create_model
+from pydantic import Field, ConfigDict
 from pydantic.config import JsonDict
 
 from pydantic.fields import FieldInfo
 
-from aijson.log_config import get_logger
 from aijson.models.config.action import (
-    Action,
     InternalActionBase,
     ActionInvocation,
     ActionMeta,
-    StreamingAction,
 )
 from aijson.models.config.value_declarations import (
     ValueDeclaration,
 )
-from aijson.models.func import _prepare_kwargs
 from aijson.models.io import Inputs, Outputs
 from aijson.models.primitives import (
     ExecutableName,
@@ -394,8 +390,6 @@ def recursive_import(package_name):
 
 
 _processed_entrypoints = set()
-_processed_subflows = set()
-_processing_subflows = False
 
 
 def file_contains_action_import(filepath: str):
@@ -466,11 +460,7 @@ def get_actions_dict(
     entrypoint_whitelist: list[str] | None = None,
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
-    from aijson.utils.static_utils import get_config_variables
-
-    global _processing_subflows
-
-    # global _processing_subflows
+    from aijson.utils.extend_action_dict_utils import add_subflows
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -486,105 +476,6 @@ def get_actions_dict(
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
 
-    if not _processing_subflows:
-        from aijson.utils.extend_action_dict_utils import extend_actions_dict
-        from aijson.models.config.flow import Executable
-        from aijson.flow import Flow
-
-        def _get_action_invocation(
-            invocation: Executable, flow: Flow
-        ) -> tuple[type[Action] | type[StreamingAction], type] | None:
-            if isinstance(invocation, ActionInvocation):
-                name = invocation.action
-                action_type = ActionMeta.actions_registry.get(name)
-                if action_type is None:
-                    return None
-                outputs_type = action_type._get_outputs_type(None)
-                _type = None
-                if issubclass(action_type, Action):
-                    _type = Action
-                elif issubclass(action_type, StreamingAction):
-                    _type = StreamingAction
-                else:
-                    return None
-                return (_type, outputs_type)
-            elif isinstance(invocation, ValueDeclaration):
-                dependencies = invocation.get_dependencies()
-                if len(dependencies) >= 0:
-                    first = flow.action_config.flow.get(list(dependencies)[0])
-                    if first is None:
-                        return None
-                    return _get_action_invocation(first, flow)
-            return None
-
-        _processing_subflows = True
-        all_subflows = extend_actions_dict()
-        for flow_name in all_subflows:
-            flow = all_subflows.get(flow_name)
-            if flow is None:
-                continue
-            if flow.action_config.name is None:
-                continue
-            if flow.action_config.name in _processed_subflows:
-                continue
-            _processed_subflows.add(flow.action_config.name)
-            outputs_type = None
-            _type = None
-            target_output = flow.action_config.get_default_output()
-            invocation = flow.action_config.flow.get(target_output)
-            if invocation is None:
-                continue
-            action_invocation = _get_action_invocation(invocation, flow)
-            if action_invocation is None:
-                continue
-            _type, outputs_type = action_invocation
-            if _type is None:
-                continue
-
-            dependencies = get_config_variables(flow.action_config)
-
-            field_definitions = {}
-            for dependency in dependencies:
-                field_definitions[dependency] = (str, ...)
-
-            InputsModel = create_model(
-                flow.action_config.name,
-                model_config=ConfigDict(
-                    arbitrary_types_allowed=True,
-                ),
-                # __base__ = inputs_type,
-                **field_definitions,
-            )
-
-            if _type == StreamingAction:
-
-                class streaming_action(StreamingAction[InputsModel, outputs_type]):
-                    name = flow.action_config.name
-                    target = target_output
-                    subflow = flow
-
-                    async def run(self, inputs) -> AsyncIterator[Any]:
-                        if self.subflow is not None:
-                            args = _prepare_kwargs(inputs)
-                            new_flow = self.subflow.set_vars(**args)
-                            stream = new_flow.stream(self.target)
-                            async for i in stream:
-                                yield i
-
-                streaming_action(get_logger(), "")
-            elif _type == Action:
-
-                class action(Action[InputsModel, outputs_type]):
-                    name = flow.action_config.name
-                    target = target_output
-                    subflow = flow
-
-                    async def run(self, inputs):
-                        if self.subflow is not None:
-                            args = _prepare_kwargs(inputs)
-                            new_flow = self.subflow.set_vars(**args)
-                            return await new_flow.run(self.target)
-
-                action(get_logger(), "")
+    add_subflows()
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
