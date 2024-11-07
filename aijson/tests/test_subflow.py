@@ -37,6 +37,16 @@ async def test_prompt_subflow(assert_no_errors):
         outputs = await flow.run()
 
 
+async def test_calling_subflow_in_subflow(assert_no_errors):
+    config = load_config_file(
+        "aijson/tests/resources/subflows/call_subflow_in_subflow.ai.yaml"
+    )
+    flow = Flow(config)
+    expectedOutput = AddOutputs(result=3)
+    output = await flow.run()
+    assert output == expectedOutput
+
+
 async def test_subflow_name(assert_no_errors):
     config = load_config_file("aijson/tests/resources/subflows/subflow_result.ai.yaml")
     assert config.name == "subflow_with_result"

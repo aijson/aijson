@@ -1,0 +1,9 @@
+version: "0.1"
+name: basic2
+flow:
+  basic_action:
+    action: basic
+  add_one:
+    action: test_add
+    a: 1
+    b: 2
