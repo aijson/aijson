@@ -33,14 +33,14 @@ def add_subflows():
                         _processed_subflows.add(full_path)
                         flow = Flow.from_file(full_path)
                         if flow.action_config.name is not None:
-                            _add_subflows(flow)
+                            _add_subflows(flow, full_path)
                     except pydantic.ValidationError:
                         continue
 
     return check_dir(".")
 
 
-def _add_subflows(flow: Flow):
+def _add_subflows(flow: Flow, path: str):
     if flow.action_config.name is None:
         return
 
@@ -104,6 +104,8 @@ def _add_subflows(flow: Flow):
             name = flow.action_config.name
             target = target_output
             subflow = flow
+            subflow_source_file = path
+            subflow_source_line = 0
 
             async def run(self, inputs) -> AsyncIterator[Any]:
                 if self.subflow is not None:
@@ -120,6 +122,8 @@ def _add_subflows(flow: Flow):
             name = flow.action_config.name
             target = target_output
             subflow = flow
+            subflow_source_file = path
+            subflow_source_line = 0
 
             async def run(self, inputs):
                 if self.subflow is not None:
