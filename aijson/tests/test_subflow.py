@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from aijson_ml.actions.llm import Inputs, Prompt
 from aijson import Flow
-from aijson.tests.resources.testing_actions import AddOutputs
+from aijson.tests.resources.testing_actions import AddOutputs, RangeStreamOutput
 from aijson.utils.action_utils import get_actions_dict
 
 
@@ -45,6 +45,15 @@ async def test_calling_subflow_in_subflow(assert_no_errors):
 async def test_subflow_name(assert_no_errors):
     flow = Flow.from_file("aijson/tests/resources/subflows/subflow_result.ai.yaml")
     assert flow.action_config.name == "subflow_with_result"
+
+
+async def test_streaming_subflow(assert_no_errors):
+    flow = Flow.from_file("aijson/tests/resources/use_streaming_subflow.ai.yaml")
+    expected_outputs = [RangeStreamOutput(value=output) for output in range(10)]
+    outputs = []
+    async for output in flow.stream():
+        outputs.append(output)
+    assert outputs == expected_outputs
 
 
 async def test_available_subflows(assert_no_errors):
