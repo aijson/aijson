@@ -62,3 +62,10 @@ async def test_available_subflows(assert_no_errors):
     for subflow_name in subflows:
         subflow = actions.get(subflow_name)
         assert subflow is not None
+
+
+async def test_run_all(assert_no_errors):
+    flow = Flow.from_file("aijson/tests/resources/use_streaming_subflow.ai.yaml")
+    expected_outputs = [AddOutputs(result=3), 3, RangeStreamOutput(value=9)]
+    result = await flow.run_all()
+    assert expected_outputs == result
