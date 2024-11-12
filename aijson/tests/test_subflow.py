@@ -22,7 +22,6 @@ async def test_subflow_result(assert_no_errors):
 
 async def test_prompt_subflow(assert_no_errors):
     flow = Flow.from_file("aijson/tests/resources/use_prompt_subflow.ai.yaml")
-
     outputs = "Hello! How can I assist you today?"
 
     async def run(self, inputs: Inputs):
@@ -31,6 +30,7 @@ async def test_prompt_subflow(assert_no_errors):
 
     with patch.object(Prompt, "run", new=run):
         outputs = await flow.run()
+    assert outputs == "Hello! How can I assist you today?"
 
 
 async def test_calling_subflow_in_subflow(assert_no_errors):
