@@ -13,10 +13,24 @@ async def test_basic_subflow(assert_no_errors):
     assert output == expected_output
 
 
+async def test_basic_subflow_by_action_name(assert_no_errors):
+    flow = Flow.from_file("aijson/tests/resources/use_basic_subflow.ai.yaml")
+    expected_output = AddOutputs(result=3)
+    output = await flow.run("action1")
+    assert output == expected_output
+
+
 async def test_subflow_result(assert_no_errors):
     flow = Flow.from_file("aijson/tests/resources/use_subflow_result.ai.yaml")
     expected_output = 3
     output = await flow.run()
+    assert output == expected_output
+
+
+async def test_subflow_result_by_action_name(assert_no_errors):
+    flow = Flow.from_file("aijson/tests/resources/use_subflow_result.ai.yaml")
+    expected_output = 3
+    output = await flow.run("action1")
     assert output == expected_output
 
 
@@ -42,6 +56,15 @@ async def test_calling_subflow_in_subflow(assert_no_errors):
     assert output == expected_output
 
 
+async def test_calling_subflow_in_subflow_by_action_name(assert_no_errors):
+    flow = Flow.from_file(
+        "aijson/tests/resources/subflows/call_subflow_in_subflow.ai.yaml"
+    )
+    expected_output = AddOutputs(result=3)
+    output = await flow.run("basic_action")
+    assert output == expected_output
+
+
 async def test_subflow_name(assert_no_errors):
     flow = Flow.from_file("aijson/tests/resources/subflows/subflow_result.ai.yaml")
     assert flow.action_config.name == "subflow_with_result"
@@ -58,7 +81,15 @@ async def test_streaming_subflow(assert_no_errors):
 
 async def test_available_subflows(assert_no_errors):
     actions = get_actions_dict()
-    subflows = ["basic", "hello_flow", "subflow_with_result"]
+    subflows = [
+        "basic",
+        "basic.add_one",
+        "hello_flow",
+        "hello_flow.hello",
+        "subflow_with_result",
+        "subflow_with_result.add_one",
+        "subflow_with_result.use_result",
+    ]
     for subflow_name in subflows:
         subflow = actions.get(subflow_name)
         assert subflow is not None
