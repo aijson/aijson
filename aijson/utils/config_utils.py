@@ -107,6 +107,7 @@ _allowed_ast_types = (
     ast.Call,
     ast.JoinedStr,
     ast.FormattedValue,
+    ast.GeneratorExp,
 )
 
 
