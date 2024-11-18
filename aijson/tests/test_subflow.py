@@ -89,6 +89,11 @@ async def test_available_subflows(assert_no_errors):
         "subflow_with_result",
         "subflow_with_result.add_one",
         "subflow_with_result.use_result",
+        "loop_subflow",
+        "loop_subflow.loop_action",
+        "loop_subflow.loop_action.action1",
+        "loop_subflow.loop_action.action2",
+        "loop_subflow.echo_action",
     ]
     for subflow_name in subflows:
         subflow = actions.get(subflow_name)
@@ -100,3 +105,11 @@ async def test_run_all(assert_no_errors):
     expected_outputs = [AddOutputs(result=3), 3, RangeStreamOutput(value=9)]
     result = await flow.run_all()
     assert expected_outputs == result
+
+
+async def test_subflow_loop(assert_no_errors):
+    flow = Flow.from_file("aijson/tests/resources/use_loop_subflow.ai.yaml")
+    flow = flow.set_vars(items=[1])
+    expected_result = [{"action2": "hello world", "action1": AddOutputs(result=3)}]
+    result = await flow.run()
+    assert expected_result == result

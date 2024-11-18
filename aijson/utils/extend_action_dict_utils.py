@@ -1,6 +1,7 @@
 import os
 from typing import Any, AsyncIterator
 import pydantic
+import copy
 
 from aijson.flow import Flow
 from aijson.log_config import get_logger
@@ -10,8 +11,8 @@ from aijson.models.config.action import (
     ActionMeta,
     StreamingAction,
 )
-from aijson.models.config.flow import Executable
-from aijson.models.config.value_declarations import ValueDeclaration
+from aijson.models.config.flow import Executable, FlowConfig
+from aijson.models.config.value_declarations import LinkDeclaration, ValueDeclaration
 from aijson.models.primitives import ExecutableId
 from aijson.utils.static_utils import get_config_variables
 from pydantic import ConfigDict, create_model
@@ -34,24 +35,25 @@ def add_subflows():
                         _processed_subflows.add(full_path)
                         flow = Flow.from_file(full_path)
                         if flow.action_config.name is not None:
-                            _add_subflows(flow, full_path)
+                            _add_subflows(
+                                flow,
+                                full_path,
+                                flow.action_config.name,
+                            )
                     except pydantic.ValidationError:
                         continue
 
     return check_dir(".")
 
 
-def _add_subflows(flow: Flow, path: str):
-    if flow.action_config.name is None:
-        return
-
+def _add_subflows(flow: Flow, path: str, subflow_name: str):
     for action in flow.action_config.flow:
-        _new_action(flow, action, path)
-    _new_action(flow, None, path)
+        _new_action(flow, action, path, subflow_name)
+    _new_action(flow, None, path, subflow_name)
 
 
 def _get_action_invocation(
-    invocation: Executable, flow: Flow
+    invocation: Executable, flow: Flow, path: str, subflow_name: str
 ) -> tuple[type[Action] | type[StreamingAction], type] | None:
     if isinstance(invocation, ActionInvocation):
         name = invocation.action
@@ -69,15 +71,25 @@ def _get_action_invocation(
         return (_type, outputs_type)
     elif isinstance(invocation, ValueDeclaration):
         dependencies = invocation.get_dependencies()
-        if len(dependencies) >= 0:
+        if isinstance(invocation, LinkDeclaration):
             first = flow.action_config.flow.get(list(dependencies)[0])
             if first is None:
                 return None
-            return _get_action_invocation(first, flow)
-    return None
+            return _get_action_invocation(first, flow, path, subflow_name)
+        else:
+            return (Action, str)
+
+    else:
+        _add_subflows(__copy_subflow(flow, invocation.flow), path, subflow_name)
+        return (Action, str)
 
 
-def _new_action(flow: Flow, action_name: ExecutableId | None, path: str):
+def _new_action(
+    flow: Flow,
+    action_name: ExecutableId | None,
+    path: str,
+    subflow_name: str,
+):
     if flow.action_config.name is None:
         return
 
@@ -88,14 +100,19 @@ def _new_action(flow: Flow, action_name: ExecutableId | None, path: str):
     invocation = flow.action_config.flow.get(action_name)
     if invocation is None:
         return
-    action_invocation = _get_action_invocation(invocation, flow)
+    action_invocation = _get_action_invocation(
+        invocation, flow, path, f"{subflow_name}.{action_name}"
+    )
     if action_invocation is None:
         return
     _type, outputs_type = action_invocation
     if _type is None:
         return
 
-    dependencies = get_config_variables(flow.action_config)
+    if outputs_type is str:
+        dependencies = set()
+    else:
+        dependencies = get_config_variables(flow.action_config)
 
     field_definitions = {}
     for dependency in dependencies:
@@ -110,9 +127,9 @@ def _new_action(flow: Flow, action_name: ExecutableId | None, path: str):
         **field_definitions,
     )
     if is_default_action:
-        full_action_name = flow.action_config.name
+        full_action_name = subflow_name
     else:
-        full_action_name = f"{flow.action_config.name}.{action_name}"
+        full_action_name = f"{subflow_name}.{action_name}"
 
     if _type == StreamingAction:
 
@@ -148,3 +165,11 @@ def _new_action(flow: Flow, action_name: ExecutableId | None, path: str):
                     return await new_flow.run(self.target)
 
         action(get_logger(), "")
+
+
+def __copy_subflow(flow: Flow, flow_config: FlowConfig):
+    subflow = copy.deepcopy(flow)
+    subflow.action_config.flow = flow_config
+    subflow.action_config.name = flow.action_config.name
+    subflow = subflow.set_vars()
+    return subflow
