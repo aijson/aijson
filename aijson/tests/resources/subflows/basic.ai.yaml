@@ -1,0 +1,7 @@
+version: "0.1"
+name: basic
+flow:
+  add_one:
+    action: test_add
+    a: 1
+    b: 2

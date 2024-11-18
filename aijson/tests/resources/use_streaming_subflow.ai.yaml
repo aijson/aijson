@@ -1,0 +1,11 @@
+version: "0.1"
+flow:
+  basic_action:
+    action: basic
+
+  with_result_action:
+    action: subflow_with_result
+
+  range_action:
+    action: range_stream
+

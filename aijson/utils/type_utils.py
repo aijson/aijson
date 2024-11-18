@@ -242,8 +242,10 @@ def build_object_uri(obj: Any) -> URIDict | None:
         obj = obj._aijson__mapped_func
     try:
         # Get the file and line number where the type is defined
-        source_file = inspect.getfile(obj)
-        source_line = inspect.getsourcelines(obj)[1]
+        source_file = getattr(obj, "subflow_source_file", inspect.getfile(obj))
+        source_line = getattr(
+            obj, "subflow_source_line", inspect.getsourcelines(obj)[1]
+        )
         # Construct the file URL
         source_path = os.path.abspath(source_file)
         # file_url = f"file://{source_path}#L{source_line}"

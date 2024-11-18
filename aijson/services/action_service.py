@@ -197,6 +197,10 @@ class ActionService:
 
         # Get the action instance
         action = self._get_action_instance(log, action_id, flow=flow)
+        # if subflow then add variables
+        if getattr(action, "subflow_source_file", None) is not None:
+            if getattr(action, "subflow", None) is not None:
+                action.subflow.variables = variables  # type: ignore
         if not isinstance(inputs, action._get_inputs_type()):
             raise ValueError(
                 f"Inputs type mismatch: {type(inputs)} != {action._get_inputs_type()}"

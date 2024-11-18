@@ -1,0 +1,6 @@
+version: "0.1"
+flow:
+  action1:
+    action: subflow_with_result.use_result
+  action2:
+    action: subflow_with_result
