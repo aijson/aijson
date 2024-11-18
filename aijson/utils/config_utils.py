@@ -108,6 +108,8 @@ _allowed_ast_types = (
     ast.JoinedStr,
     ast.FormattedValue,
     ast.GeneratorExp,
+    ast.Sub,
+    ast.Mult,
 )
 
 
