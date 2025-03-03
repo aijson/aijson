@@ -24,7 +24,6 @@ structlog-sentry = "^2.0.3"
 greenlet = "^3.0.3"
 nltk = "^3.8.1"
 simpleeval = "^0.9.13"
-anyio = "^3.7.1,<4.0.0"
 datamodel-code-generator = "^0.25.6"
 
 aioboto3 = { version = "^12.2.0", optional = false }
