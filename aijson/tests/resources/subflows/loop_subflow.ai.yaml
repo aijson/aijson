@@ -1,0 +1,16 @@
+version: "0.1"
+name: loop_subflow
+flow:
+  echo_action:
+    text: echo
+  loop_action:
+    for: item
+    in:
+      var: items
+    flow:
+      action1:
+        action: test_add
+        a: 1
+        b: 2
+      action2:
+        text: hello world  

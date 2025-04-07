@@ -1,0 +1,5 @@
+version: "0.1"
+flow:
+ example:
+  action: hello_flow
+  smth: hello

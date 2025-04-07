@@ -1,0 +1,9 @@
+version: "0.1"
+name: subflow_with_result
+flow:
+  add_one:
+    action: test_add
+    a: 1
+    b: 2
+  use_result:
+    link: add_one.result

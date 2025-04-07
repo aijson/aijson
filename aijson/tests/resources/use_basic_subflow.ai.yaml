@@ -1,0 +1,7 @@
+version: "0.1"
+flow:
+  action1:
+    action: basic.add_one
+  action2:
+    action: basic
+
