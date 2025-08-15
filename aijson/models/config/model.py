@@ -26,6 +26,10 @@ ModelType = (
     # openai models
     Annotated[
         Literal[
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-4.1",
+            "gpt-4.1-mini",
             "gpt-4o",
             "gpt-4o-mini",
             "gpt-4-1106-preview",
@@ -51,6 +55,10 @@ ModelType = (
     # anthropic models
     Annotated[
         Literal[
+            "claude-opus-4-1-20250805",
+            "claude-opus-4-20250514",
+            "claude-sonnet-4-20250514",
+            "claude-3-7-sonnet-20250219",
             "claude-3-5-sonnet-20240620",
             "claude-3-haiku-20240307",
             "claude-3-opus-20240229",
