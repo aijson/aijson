@@ -55,6 +55,7 @@ class ActionConfig(StrictModel):
     action_timeout: float = 360
     flow: "FlowConfig"
     default_output: ContextVarPath | None = None  # TODO `| ValueDeclaration`
+    name: str | None = None
 
     def get_default_output(self) -> ContextVarPath:
         if self.default_output is not None:

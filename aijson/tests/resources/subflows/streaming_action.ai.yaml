@@ -1,0 +1,6 @@
+version: "0.1"
+name: range_stream
+flow:
+  action1:
+    action: test_range_stream
+    range: 10

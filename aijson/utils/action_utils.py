@@ -460,6 +460,7 @@ def get_actions_dict(
     entrypoint_whitelist: list[str] | None = None,
 ) -> dict[ExecutableName, Type[InternalActionBase[Any, Any]]]:
     import importlib_metadata
+    from aijson.utils.extend_action_dict_utils import add_subflows
 
     # import all action entrypoints
     entrypoints = importlib_metadata.entry_points(group="aijson")
@@ -475,5 +476,6 @@ def get_actions_dict(
         except Exception as e:
             print(f"Failed to import {dist_name} entrypoint: {e}")
 
+    add_subflows()
     # return all subclasses of Action as registered in the metaclass
     return ActionMeta.actions_registry
